@@ -16,7 +16,7 @@ def scrape_coles():
     options.add_argument('--log-level=3')
     options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
     
-    driver = uc.Chrome(options=options) 
+    driver = uc.Chrome(options=options, version_main=144) 
     driver.maximize_window() 
     products_data = []
 
@@ -35,15 +35,15 @@ def scrape_coles():
 
     # Temporary
     print(urls)
-    test = [urls[0]]
+    # test = [urls[1]]
 
-    for url in test:
+    for url in urls:
         page_counter = 0
         print(url)
         while True:
             try:
                 page_counter += 1
-                driver.get(f'{url}?page={page_counter}')
+                driver.get(f'{url}&page={page_counter}')
 
                 print("Waiting for product tiles to load...")
                 long_wait = WebDriverWait(driver, 7)
@@ -57,12 +57,12 @@ def scrape_coles():
                 for host in product_tile_hosts:
                     try:
                         name = host.find_element(By.CSS_SELECTOR, '.product__title').text.strip()
-                        time.sleep(random.random()/2)
+                        # time.sleep(random.random()/2)
                         price = host.find_element(By.CSS_SELECTOR, '.price__value').text.strip()
-                        time.sleep(random.random()/2)
+                        # time.sleep(random.random()/2)
 
                         try:
-                            unit_price = host.find_element(By.CSS_SELECTOR, '.price__calculation_method').text.strip().split('|')[0].strip()
+                            unit_price = host.find_element(By.CSS_SELECTOR, '.price__calculation_method').text.strip().split('|')[0].strip().split('\n')[0].strip()
                         except NoSuchElementException:
                             unit_price = "N/A"
 

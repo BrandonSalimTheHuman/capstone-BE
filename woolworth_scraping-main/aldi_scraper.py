@@ -87,7 +87,7 @@ if __name__ == "__main__":
     print(scraped_data)
     if scraped_data and len(scraped_data) > 0:
         df = pd.DataFrame(scraped_data)
-        file_name = 'aldi_cheese_test.csv'
+        file_name = 'aldi_test.csv'
         df.to_csv(file_name, index=False, encoding='utf-8')
         print(f"\nScraping complete!") 
         print(f"Successfully scraped {len(scraped_data)} products.")
