@@ -35,7 +35,7 @@ def scrape_coles():
 
     # Temporary
     print(urls)
-    # test = [urls[1]]
+    urls = [urls[2]]
 
     for url in urls:
         page_counter = 0
@@ -76,7 +76,7 @@ def scrape_coles():
                         
                         img = host.find_element(By.CSS_SELECTOR, '[data-testid="product-image"]').get_attribute('src')
 
-                        products_data.append({'Product Name': name, 'Price': price, 'Unit Price': unit_price, 'Complex Discount': complex_discount})
+                        products_data.append({'Product Name': name, 'Price': price, 'Unit Price': unit_price, 'Complex Discount': complex_discount, 'Image': img})
                     except (NoSuchElementException, AttributeError):
                         continue
                     except StaleElementReferenceException: 
@@ -103,6 +103,7 @@ def scrape_coles():
 
 if __name__ == "__main__":
     print("Scraping Coles...")
+    start_time = time.time()
     scraped_data = scrape_coles()
     
     if scraped_data and len(scraped_data) > 0:
@@ -114,5 +115,6 @@ if __name__ == "__main__":
         print(f"Data saved to '{file_name}'")
         print("\n--- Sample of Scraped Data ---")
         print(df.head())
+        print("Time taken:", str(time.time() - start_time))
     else:
         print("\nScraping failed. No data was retrieved.") 
