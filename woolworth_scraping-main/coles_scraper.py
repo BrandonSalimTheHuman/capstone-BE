@@ -65,11 +65,12 @@ def scrape_coles():
         print(url)
         while True:
             try:
+                page_start_time = time.time()
                 page_counter += 1
                 driver.get(f'{url}&page={page_counter}')
 
                 # sleep for some time
-                time.sleep(random.uniform(1, 3))
+                time.sleep(random.uniform(0.5, 1.5))
 
                 scroll(driver)
 
@@ -113,6 +114,9 @@ def scrape_coles():
                             print("Stale element encountered")
                             page_counter -= 1
                             break
+                if time.time() - page_start_time < 12:
+                     # sleep for some time
+                    time.sleep(random.uniform(1.5, 3))
 
             except TimeoutException:
                 print("Timeout waiting for product tiles. Assuming end of pages.")
