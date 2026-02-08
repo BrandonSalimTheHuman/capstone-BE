@@ -7,17 +7,40 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.common.exceptions import TimeoutException, NoSuchElementException, StaleElementReferenceException
+from fake_useragent import UserAgent
 import undetected_chromedriver as uc
 import json
 import random
 
+def scroll(driver):
+    # get scrollable height
+    total_height = driver.execute_script("return document.body.scrollHeight")
+    # simulate slow scrolling
+    for i in range(0, (total_height * random.random()), random.randint(400, 700)):
+        driver.execute_script(f"window.scrollTo(0, {i});")
+        time.sleep(random.uniform(0.2, 0.4))
+
 def scrape_coles():
     options = uc.ChromeOptions()
     options.add_argument('--log-level=3')
-    options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
+
+    # create a random fake user agent
+    ua = UserAgent()
+    user_agent = ua.random
+    options.add_argument(f'user-agent={user_agent}')
     
     driver = uc.Chrome(options=options, version_main=144) 
     driver.maximize_window() 
+
+    # seeing the navigator.webdriver property to false
+    driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {
+        "source": """
+            Object.defineProperty(navigator, 'webdriver', {
+            get: () => undefined
+            })
+        """
+    })
+
     products_data = []
 
     driver.get('https://www.coles.com.au/browse')
@@ -45,22 +68,29 @@ def scrape_coles():
                 page_counter += 1
                 driver.get(f'{url}&page={page_counter}')
 
+                # sleep for some time
+                time.sleep(random.uniform(1, 3))
+
+                scroll(driver)
+
                 print("Waiting for product tiles to load...")
                 long_wait = WebDriverWait(driver, 7)
                 product_tile_hosts = long_wait.until(
                     EC.presence_of_all_elements_located((By.CSS_SELECTOR, '.list-item:not(.single-tile-ad)'))
                 )
-                time.sleep(random.random())
-                
+
                 print(f"Found {len(product_tile_hosts)} product tiles on the page.")
 
-                for host in product_tile_hosts:
+                for i, host in enumerate(product_tile_hosts):
                     try:
-                        name = host.find_element(By.CSS_SELECTOR, '.product__title').text.strip()
-                        # time.sleep(random.random()/2)
-                        price = host.find_element(By.CSS_SELECTOR, '.price__value').text.strip()
-                        # time.sleep(random.random()/2)
+                        if i%6 == 0:
+                            # I sleep
+                            time.sleep(random.uniform(0.05, 0.25))
 
+                        name = host.find_element(By.CSS_SELECTOR, '.product__title').text.strip()
+          
+                        price = host.find_element(By.CSS_SELECTOR, '.price__value').text.strip()
+          
                         try:
                             unit_price = host.find_element(By.CSS_SELECTOR, '.price__calculation_method').text.strip().split('|')[0].strip().split('\n')[0].strip()
                         except NoSuchElementException:
@@ -108,7 +138,7 @@ if __name__ == "__main__":
     
     if scraped_data and len(scraped_data) > 0:
         df = pd.DataFrame(scraped_data)
-        file_name = 'coles_test.csv'
+        file_name = 'coles_test_2.csv'
         df.to_csv(file_name, index=False, encoding='utf-8')
         print(f"\nScraping complete!") 
         print(f"Successfully scraped {len(scraped_data)} products.")
