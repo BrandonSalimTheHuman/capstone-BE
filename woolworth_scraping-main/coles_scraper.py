@@ -16,7 +16,7 @@ def scroll(driver):
     # get scrollable height
     total_height = driver.execute_script("return document.body.scrollHeight")
     # simulate slow scrolling
-    for i in range(0, (total_height * random.random()), random.randint(400, 700)):
+    for i in range(0, (round(total_height * random.random())), random.randint(400, 700)):
         driver.execute_script(f"window.scrollTo(0, {i});")
         time.sleep(random.uniform(0.2, 0.4))
 
@@ -114,9 +114,6 @@ def scrape_coles():
                             print("Stale element encountered")
                             page_counter -= 1
                             break
-                if time.time() - page_start_time < 12:
-                     # sleep for some time
-                    time.sleep(random.uniform(1.5, 3))
 
             except TimeoutException:
                 print("Timeout waiting for product tiles. Assuming end of pages.")
