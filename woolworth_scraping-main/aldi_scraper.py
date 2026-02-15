@@ -11,8 +11,6 @@ import json
 
 URL = "https://www.aldi.com.au/products"
 
-# def get_shadow_root(driver, host_element):
-#     return driver.execute_script('return arguments[0].shadowRoot', host_element)
 
 def scrape_aldi_specials():
     service = Service(ChromeDriverManager().install())
@@ -26,6 +24,46 @@ def scrape_aldi_specials():
     driver = webdriver.Chrome(service=service, options=options)
     driver.maximize_window() 
 
+    driver.get(URL)
+
+    # Changing the location
+    # Press location change button
+    try:
+        change_address_button = driver.find_element(By.CSS_SELECTOR, '[data-mn="merchant-change-button"]')
+        change_address_button.click()
+        time.sleep(1)
+    except NoSuchElementException:
+        print("BUtton to change address not found")
+
+    # Proceeding to merchant page
+    try:
+        proceed_button = driver.find_element(By.CSS_SELECTOR, '[data-mn="merchant-change-confirm"]')
+        proceed_button.click()
+        time.sleep(1)
+    except NoSuchElementException:
+        print("Button to proceed not found")
+    
+    # Inputting text into search box
+    try:
+        search_box = driver.find_element(By.CSS_SELECTOR, '[data-mn="merchant-search-box"]')
+        search_box.send_keys("Fairy Meadow")
+        time.sleep(1)
+    except NoSuchElementException:
+        print("Search bar not found")
+    
+    # Confirming address change:
+    try:
+        long_wait = WebDriverWait(driver, 7)
+        long_wait.until(
+            EC.presence_of_all_elements_located((By.CSS_SELECTOR, '[aria-label="Select Store ALDI Fairy Meadow"]'))
+        )
+        search_box = driver.find_element(By.CSS_SELECTOR, '[aria-label="Select Store ALDI Fairy Meadow"]')
+        search_box.click()
+        time.sleep(1)
+    except NoSuchElementException:
+        print("Button to confirm change not found")
+
+    # Main scraping logic
     products_data = []
     page_counter = 0
 
