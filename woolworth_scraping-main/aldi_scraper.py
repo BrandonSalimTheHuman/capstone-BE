@@ -87,8 +87,11 @@ def scrape_aldi_specials():
                     price = host.find_element(By.CSS_SELECTOR, '.base-price__regular').text.strip()
                                 
                     try:
-                        unit_price = host.find_element(By.CSS_SELECTOR, '.base-price__comparison-price').text.strip()[1:-1]
+                        unit_price = host.find_element(By.CSS_SELECTOR, '.product-tile__comparison-price').text.strip()[1:-1]
                     except NoSuchElementException:
+                        unit_price = "N/A"
+                    
+                    if unit_price == '' or unit_price is None:
                         unit_price = "N/A"
 
                     img = host.find_element(By.CSS_SELECTOR, '.base-image').get_attribute('src')
