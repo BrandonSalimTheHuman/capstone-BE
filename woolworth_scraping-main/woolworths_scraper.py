@@ -6,8 +6,9 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
-from selenium.common.exceptions import TimeoutException, NoSuchElementException, StaleElementReferenceException
+from selenium.common.exceptions import TimeoutException, NoSuchElementException, StaleElementReferenceException, DetachedShadowRootException
 import re
+import random
 
 URL = "https://www.woolworths.com.au"
 
@@ -77,7 +78,6 @@ def scrape_woolworths_specials():
             category_urls.append(category_url)
         
         category_urls = category_urls[1:-1]
-
         while True:
             driver.get("https://www.woolworths.com.au/shop/browse/fruit-veg")
             try:
@@ -139,27 +139,63 @@ def scrape_woolworths_specials():
 
                 for host in product_tile_hosts:
                     try:
+                        # random sleeping
+                        if random.random() < 0.3:
+                            time.sleep(random.uniform(0.25, 1))
+                        
+                        # get shadow root
                         shadow_root = get_shadow_root(driver, host)
+
+                        time.sleep(0.05)
+
+                        # product name
                         name = shadow_root.find_element(By.CSS_SELECTOR, '.product-title-container .title').text.strip()
+
+                        # product price
                         try:
-                            price = shadow_root.find_element(By.CSS_SELECTOR, 'div.primary').text.strip()
+                            full_price = shadow_root.find_element(By.CSS_SELECTOR, 'div.primary').text.strip()
+                            price = full_price.split()[0]
                         except NoSuchElementException:
                             continue
+
+                        # product unit price
                         try:
                             unit_price = shadow_root.find_element(By.CSS_SELECTOR, 'span.price-per-cup').text.strip()
                         except NoSuchElementException:
                             unit_price = "N/A" 
+
+                        # product promo
+                        try:
+                            promo_area = shadow_root.find_element(By.CSS_SELECTOR, '.product-tile-promo-info')
+                            try:
+                                complex_discount = promo_area.find_element(By.TAG_NAME, 'span')
+                                complex_discount_words = complex_discount.text.lower().strip().split()
+                                if len(complex_discount_words) == 3:
+                                    for i in range(len(complex_discount_words)):
+                                        if complex_discount_words[i] == 'for':
+                                            complex_discount = {'Quantity': complex_discount_words[i-1], 'Price': complex_discount_words[i+1][1:]}
+                                else:
+                                    complex_discount = "N/A"
+                            except NoSuchElementException:
+                                complex_discount = "N/A"
+                        except NoSuchElementException:
+                            complex_discount = "N/A"
                         
+                        # product image
                         img = shadow_root.find_element(By.CSS_SELECTOR, '.product-tile-image img').get_attribute('src')
-                        newly_added_items.append({'Product Name': name, 'Price': price, 'Unit Price': unit_price, 'Image': img})
+
+                        # adding to newly added items
+                        newly_added_items.append({'Product Name': name, 'Price': price, 'Unit Price': unit_price, 'Complex discount': complex_discount, 'Image': img})
                     except (NoSuchElementException, AttributeError):
                         continue
-                    except StaleElementReferenceException: 
+                    except (StaleElementReferenceException, DetachedShadowRootException): 
                         print("Stale element encountered")
+                        # try again
                         page_counter -= 1
                         stale = True
                         break
                 
+                # if there wasn't an error, check if every item already exists. If so, the products is assumed to have run out, move to the next category
                 if not stale:
                     check = True
                     for item in newly_added_items:
@@ -189,7 +225,7 @@ if __name__ == "__main__":
     
     if scraped_data and len(scraped_data) > 0:
         df = pd.DataFrame(scraped_data)
-        file_name = 'woolworths_test.csv'
+        file_name = 'woolworths_test2.csv'
         df.to_csv(file_name, index=False, encoding='utf-8')
         print(f"\nScraping complete!") 
         print(f"Successfully scraped {len(scraped_data)} products.")
