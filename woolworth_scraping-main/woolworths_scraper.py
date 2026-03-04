@@ -170,10 +170,14 @@ def scrape_woolworths_specials():
                             try:
                                 complex_discount = promo_area.find_element(By.TAG_NAME, 'span')
                                 complex_discount_words = complex_discount.text.lower().strip().split()
+                                check = False
                                 if len(complex_discount_words) == 3:
                                     for i in range(len(complex_discount_words)):
                                         if complex_discount_words[i] == 'for':
                                             complex_discount = {'Quantity': complex_discount_words[i-1], 'Price': complex_discount_words[i+1][1:]}
+                                            check = True
+                                    if not check:
+                                        complex_discount = "N/A"
                                 else:
                                     complex_discount = "N/A"
                             except NoSuchElementException:
