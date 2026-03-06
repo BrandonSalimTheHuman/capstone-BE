@@ -18,7 +18,7 @@ def scroll(driver):
     # simulate slow scrolling
     for i in range(0, (round(total_height * random.random())), random.randint(400, 700)):
         driver.execute_script(f"window.scrollTo(0, {i});")
-        time.sleep(random.uniform(0.2, 0.4))
+        time.sleep(random.uniform(0.25, 0.45))
 
 def scrape_coles():
     options = uc.ChromeOptions()
@@ -45,7 +45,7 @@ def scrape_coles():
 
     driver.get('https://www.coles.com.au/browse')
 
-    long_wait = WebDriverWait(driver, 7)
+    long_wait = WebDriverWait(driver, 30)
     category_containers= long_wait.until(
         EC.presence_of_all_elements_located((By.CSS_SELECTOR, '.coles-targeting-ShopCategoriesShopCategoryStyledCategoryContainer'))
     )
@@ -58,19 +58,17 @@ def scrape_coles():
 
     # Temporary
     print(urls)
-    urls = [urls[2]]
 
     for url in urls:
         page_counter = 0
-        print(url)
         while True:
             try:
                 page_start_time = time.time()
                 page_counter += 1
-                driver.get(f'{url}&page={page_counter}')
+                driver.get(f'{url}?page={page_counter}')
 
                 # sleep for some time
-                time.sleep(random.uniform(0.5, 1.5))
+                time.sleep(random.uniform(0.3, 1.3))
 
                 scroll(driver)
 
@@ -86,9 +84,11 @@ def scrape_coles():
                     try:
                         if i%6 == 0:
                             # I sleep
-                            time.sleep(random.uniform(0.05, 0.25))
+                            time.sleep(random.uniform(0.1, 0.3))
 
-                        name = host.find_element(By.CSS_SELECTOR, '.product__title').text.strip()
+                        title_area = host.find_element(By.CSS_SELECTOR, '.product__message-title_area')
+                        name = title_area.find_element(By.CSS_SELECTOR, '.sr-only').text.strip()
+                        # name = host.find_element(By.CSS_SELECTOR, '.product__title').text.strip()
           
                         price = host.find_element(By.CSS_SELECTOR, '.price__value').text.strip()
           
@@ -121,6 +121,11 @@ def scrape_coles():
             except Exception as e:
                 print(f"An unexpected error occurred: {e}")
                 return None
+            
+            end_time = time.time()
+            while end_time - page_start_time < 14:
+                time.sleep(random.uniform(0.5, 3.5))
+                end_time = time.time()
 
     unique_products = [
     json.loads(element) for element in set(
