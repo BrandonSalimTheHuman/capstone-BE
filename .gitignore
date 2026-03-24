@@ -1,0 +1,9 @@
+# Local environment
+.env
+
+# Utility scripts not for source control
+upload_data.py
+
+# Python cache artifacts
+__pycache__/
+*.pyc

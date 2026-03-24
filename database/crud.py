@@ -1,8 +1,8 @@
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from datetime import datetime
-import models
-import schemas
+from database import models
+from database.schemas import schemas
 
 # STORE CRUD 
 

@@ -1,9 +1,7 @@
 from sqlalchemy import Column, Integer, String, DECIMAL, DateTime, Boolean, ForeignKey
 from sqlalchemy.orm import relationship
-from sqlalchemy.ext.declarative import declarative_base
 from datetime import datetime
-
-Base = declarative_base()
+from database.database import Base
 
 class Store(Base):
     __tablename__ = "stores"
