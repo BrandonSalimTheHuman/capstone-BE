@@ -82,9 +82,12 @@ def scrape_woolworths_specials():
             driver.get("https://www.woolworths.com.au/shop/browse/fruit-veg")
             try:
                 long_wait = WebDriverWait(driver, 20)
-                right_arrow_load = long_wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '.chip-nav-arrow.right')))
-                right_arrow = driver.find_element(By.CSS_SELECTOR, '.chip-nav-arrow.right')
-                right_arrow.click()
+                try:
+                    right_arrow_load = long_wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '.chip-nav-arrow.right')))
+                    right_arrow = driver.find_element(By.CSS_SELECTOR, '.chip-nav-arrow.right')
+                    right_arrow.click()
+                except NoSuchElementException:
+                    print("Skipping right arrow")
                 buttons_load = long_wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '.chip.chip-secondary')))
                 buttons = driver.find_elements(By.CSS_SELECTOR, '.chip.chip-secondary')
                 for button in buttons:
