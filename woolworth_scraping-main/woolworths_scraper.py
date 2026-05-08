@@ -6,7 +6,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
-from selenium.common.exceptions import TimeoutException, NoSuchElementException, StaleElementReferenceException, DetachedShadowRootException
+from selenium.common.exceptions import TimeoutException, NoSuchElementException, StaleElementReferenceException, DetachedShadowRootException, ElementClickInterceptedException
 import re
 import random
 
@@ -88,6 +88,8 @@ def scrape_woolworths_specials():
                     right_arrow.click()
                 except NoSuchElementException:
                     print("Skipping right arrow")
+                except ElementClickInterceptedException:
+                    print("Skipping right arrow (intercepted)")
                 buttons_load = long_wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '.chip.chip-secondary')))
                 buttons = driver.find_elements(By.CSS_SELECTOR, '.chip.chip-secondary')
                 for button in buttons:
