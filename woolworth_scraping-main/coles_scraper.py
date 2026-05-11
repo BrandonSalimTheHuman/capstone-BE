@@ -29,7 +29,7 @@ def scrape_coles():
     user_agent = ua.random
     options.add_argument(f'user-agent={user_agent}')
     
-    driver = uc.Chrome(options=options, version_main=144) 
+    driver = uc.Chrome(options=options) 
     driver.maximize_window() 
 
     # seeing the navigator.webdriver property to false
@@ -58,6 +58,7 @@ def scrape_coles():
 
     # Temporary
     print(urls)
+    urss = [urls[0]]
 
     for url in urls:
         page_counter = 0
@@ -120,7 +121,7 @@ def scrape_coles():
                 break 
             except Exception as e:
                 print(f"An unexpected error occurred: {e}")
-                return None
+                break
             
             end_time = time.time()
             while end_time - page_start_time < 14:
