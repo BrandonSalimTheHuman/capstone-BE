@@ -56,9 +56,6 @@ def scrape_coles():
         url = container.get_attribute('href')
         urls.append(url)
 
-    # Temporary
-    print(urls)
-    urss = [urls[0]]
 
     for url in urls:
         page_counter = 0
