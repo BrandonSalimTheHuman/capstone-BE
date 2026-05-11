@@ -216,12 +216,11 @@ def scrape_woolworths_specials():
                         break
 
     except TimeoutException:
-        print("Scraping failed: Timed out waiting for product tiles to appear.")
-        print("Watch the browser window when the script runs to see what is blocking the content.")
-        return None
+        print("Scraping Interrupted: Timed out waiting for product tiles to appear.")
+        return products_data
     except Exception as e:
         print(f"An unexpected error occurred: {e}")
-        return None
+        return products_data
     finally:
         print("Closing browser.")
         driver.quit()

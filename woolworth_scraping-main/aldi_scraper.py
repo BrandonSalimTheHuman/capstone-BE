@@ -110,7 +110,7 @@ def scrape_aldi_specials():
             break 
         except Exception as e:
             print(f"An unexpected error occurred: {e}")
-            return None
+            break
           
     unique_products = [
         json.loads(element) for element in set(
