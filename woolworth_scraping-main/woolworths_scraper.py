@@ -6,7 +6,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
-from selenium.common.exceptions import TimeoutException, NoSuchElementException, StaleElementReferenceException, DetachedShadowRootException
+from selenium.common.exceptions import TimeoutException, NoSuchElementException, StaleElementReferenceException, DetachedShadowRootException, ElementClickInterceptedException
 import re
 import random
 
@@ -92,9 +92,14 @@ def scrape_woolworths_specials(part=None, headless=False):
             driver.get("https://www.woolworths.com.au/shop/browse/fruit-veg")
             try:
                 long_wait = WebDriverWait(driver, 20)
-                right_arrow_load = long_wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '.chip-nav-arrow.right')))
-                right_arrow = driver.find_element(By.CSS_SELECTOR, '.chip-nav-arrow.right')
-                right_arrow.click()
+                try:
+                    right_arrow_load = long_wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '.chip-nav-arrow.right')))
+                    right_arrow = driver.find_element(By.CSS_SELECTOR, '.chip-nav-arrow.right')
+                    right_arrow.click()
+                except NoSuchElementException:
+                    print("Skipping right arrow")
+                except ElementClickInterceptedException:
+                    print("Skipping right arrow (intercepted)")
                 buttons_load = long_wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '.chip.chip-secondary')))
                 buttons = driver.find_elements(By.CSS_SELECTOR, '.chip.chip-secondary')
                 for button in buttons:
@@ -221,12 +226,11 @@ def scrape_woolworths_specials(part=None, headless=False):
                         break
 
     except TimeoutException:
-        print("Scraping failed: Timed out waiting for product tiles to appear.")
-        print("Watch the browser window when the script runs to see what is blocking the content.")
-        return None
+        print("Scraping Interrupted: Timed out waiting for product tiles to appear.")
+        return products_data
     except Exception as e:
         print(f"An unexpected error occurred: {e}")
-        return None
+        return products_data
     finally:
         print("Closing browser.")
         driver.quit()
