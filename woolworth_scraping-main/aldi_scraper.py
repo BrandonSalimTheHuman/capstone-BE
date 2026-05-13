@@ -1,5 +1,4 @@
 import time
-import pandas as pd
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
@@ -12,12 +11,16 @@ import json
 URL = "https://www.aldi.com.au/products"
 
 
-def scrape_aldi_specials():
+def scrape_aldi_specials(headless=False):
     service = Service(ChromeDriverManager().install())
     options = webdriver.ChromeOptions()
-    
-    # options.add_argument('--headless')
-    
+
+    if headless:
+        options.add_argument('--headless=new')
+        options.add_argument('--no-sandbox')
+        options.add_argument('--disable-dev-shm-usage')
+        options.add_argument('--disable-gpu')
+
     options.add_argument('--log-level=3')
     options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
     
@@ -110,7 +113,7 @@ def scrape_aldi_specials():
             break 
         except Exception as e:
             print(f"An unexpected error occurred: {e}")
-            return None
+            break
           
     unique_products = [
         json.loads(element) for element in set(
@@ -123,17 +126,20 @@ def scrape_aldi_specials():
     return unique_products
 
 if __name__ == "__main__":
+    import argparse
+    import db_upload
+
+    parser = argparse.ArgumentParser(description="Scrape Aldi and upload to DB")
+    parser.add_argument('--headless', action='store_true',
+                        help="Run Chrome in headless mode (required for CI)")
+    args = parser.parse_args()
+
     print("Scraping Aldi...")
-    scraped_data = scrape_aldi_specials()
-    print(scraped_data)
-    if scraped_data and len(scraped_data) > 0:
-        df = pd.DataFrame(scraped_data)
-        file_name = 'aldi_test.csv'
-        df.to_csv(file_name, index=False, encoding='utf-8')
-        print(f"\nScraping complete!") 
-        print(f"Successfully scraped {len(scraped_data)} products.")
-        print(f"Data saved to '{file_name}'")
-        print("\n--- Sample of Scraped Data ---")
-        print(df.head())
+    scraped_data = scrape_aldi_specials(headless=args.headless)
+
+    if scraped_data:
+        print(f"Scraped {len(scraped_data)} products. Uploading to database...")
+        db_upload.upload_products(scraped_data, "Aldi")
     else:
-        print("\nScraping failed. No data was retrieved.") 
+        print("Scraping returned no data.")
+        raise SystemExit(1)

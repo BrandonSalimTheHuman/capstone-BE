@@ -15,17 +15,21 @@ URL = "https://www.woolworths.com.au"
 def get_shadow_root(driver, host_element):
     return driver.execute_script('return arguments[0].shadowRoot', host_element)
 
-def scrape_woolworths_specials():
+def scrape_woolworths_specials(part=None, headless=False):
     service = Service(ChromeDriverManager().install())
     options = webdriver.ChromeOptions()
-    
-    # options.add_argument('--headless')
-    
+
+    if headless:
+        options.add_argument('--headless=new')
+        options.add_argument('--no-sandbox')
+        options.add_argument('--disable-dev-shm-usage')
+        options.add_argument('--disable-gpu')
+
     options.add_argument('--log-level=3')
     options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
-    
+
     driver = webdriver.Chrome(service=service, options=options)
-    driver.maximize_window() 
+    driver.maximize_window()
     products_data = []
     
     try:
@@ -78,6 +82,12 @@ def scrape_woolworths_specials():
             category_urls.append(category_url)
         
         category_urls = category_urls[1:-1]
+
+        if part == 1:
+            category_urls = category_urls[:len(category_urls) // 2]
+        elif part == 2:
+            category_urls = category_urls[len(category_urls) // 2:]
+
         while True:
             driver.get("https://www.woolworths.com.au/shop/browse/fruit-veg")
             try:
@@ -224,17 +234,23 @@ def scrape_woolworths_specials():
     return products_data
 
 if __name__ == "__main__":
-    print("Scraping Woolworths test...")
-    scraped_data = scrape_woolworths_specials()
-    
-    if scraped_data and len(scraped_data) > 0:
-        df = pd.DataFrame(scraped_data)
-        file_name = 'woolworths_test2.csv'
-        df.to_csv(file_name, index=False, encoding='utf-8')
-        print(f"\nScraping complete!") 
-        print(f"Successfully scraped {len(scraped_data)} products.")
-        print(f"Data saved to '{file_name}'")
-        print("\n--- Sample of Scraped Data ---")
-        print(df.head())
+    import argparse
+    import db_upload
+
+    parser = argparse.ArgumentParser(description="Scrape Woolworths and upload to DB")
+    parser.add_argument('--part', type=int, choices=[1, 2], default=None,
+                        help="Scrape only the first (1) or second (2) half of categories")
+    parser.add_argument('--headless', action='store_true',
+                        help="Run Chrome in headless mode (required for CI)")
+    args = parser.parse_args()
+
+    part_label = f" (part {args.part})" if args.part else ""
+    print(f"Scraping Woolworths{part_label}...")
+    scraped_data = scrape_woolworths_specials(part=args.part, headless=args.headless)
+
+    if scraped_data:
+        print(f"Scraped {len(scraped_data)} products. Uploading to database...")
+        db_upload.upload_products(scraped_data, "Woolworths")
     else:
-        print("\nScraping failed. No data was retrieved.") 
+        print("Scraping returned no data.")
+        raise SystemExit(1)

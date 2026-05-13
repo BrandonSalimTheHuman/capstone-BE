@@ -1,5 +1,4 @@
 import time
-import pandas as pd
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
@@ -20,17 +19,23 @@ def scroll(driver):
         driver.execute_script(f"window.scrollTo(0, {i});")
         time.sleep(random.uniform(0.25, 0.45))
 
-def scrape_coles():
+def scrape_coles(part=None, headless=False):
     options = uc.ChromeOptions()
     options.add_argument('--log-level=3')
+
+    if headless:
+        options.add_argument('--headless=new')
+        options.add_argument('--no-sandbox')
+        options.add_argument('--disable-dev-shm-usage')
+        options.add_argument('--disable-gpu')
 
     # create a random fake user agent
     ua = UserAgent()
     user_agent = ua.random
     options.add_argument(f'user-agent={user_agent}')
-    
-    driver = uc.Chrome(options=options, version_main=144) 
-    driver.maximize_window() 
+
+    driver = uc.Chrome(options=options)
+    driver.maximize_window()
 
     # seeing the navigator.webdriver property to false
     driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {
@@ -56,8 +61,10 @@ def scrape_coles():
         url = container.get_attribute('href')
         urls.append(url)
 
-    # Temporary
-    print(urls)
+    if part == 1:
+        urls = urls[:len(urls) // 2]
+    elif part == 2:
+        urls = urls[len(urls) // 2:]
 
     for url in urls:
         page_counter = 0
@@ -120,7 +127,7 @@ def scrape_coles():
                 break 
             except Exception as e:
                 print(f"An unexpected error occurred: {e}")
-                return None
+                break
             
             end_time = time.time()
             while end_time - page_start_time < 14:
@@ -138,19 +145,23 @@ def scrape_coles():
     return unique_products
 
 if __name__ == "__main__":
-    print("Scraping Coles...")
-    start_time = time.time()
-    scraped_data = scrape_coles()
-    
-    if scraped_data and len(scraped_data) > 0:
-        df = pd.DataFrame(scraped_data)
-        file_name = 'coles_test_2.csv'
-        df.to_csv(file_name, index=False, encoding='utf-8')
-        print(f"\nScraping complete!") 
-        print(f"Successfully scraped {len(scraped_data)} products.")
-        print(f"Data saved to '{file_name}'")
-        print("\n--- Sample of Scraped Data ---")
-        print(df.head())
-        print("Time taken:", str(time.time() - start_time))
+    import argparse
+    import db_upload
+
+    parser = argparse.ArgumentParser(description="Scrape Coles and upload to DB")
+    parser.add_argument('--part', type=int, choices=[1, 2], default=None,
+                        help="Scrape only the first (1) or second (2) half of categories")
+    parser.add_argument('--headless', action='store_true',
+                        help="Run Chrome in headless mode (required for CI)")
+    args = parser.parse_args()
+
+    part_label = f" (part {args.part})" if args.part else ""
+    print(f"Scraping Coles{part_label}...")
+    scraped_data = scrape_coles(part=args.part, headless=args.headless)
+
+    if scraped_data:
+        print(f"Scraped {len(scraped_data)} products. Uploading to database...")
+        db_upload.upload_products(scraped_data, "Coles")
     else:
-        print("\nScraping failed. No data was retrieved.") 
+        print("Scraping returned no data.")
+        raise SystemExit(1)

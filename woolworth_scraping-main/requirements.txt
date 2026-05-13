@@ -1,0 +1,7 @@
+selenium
+webdriver-manager
+undetected-chromedriver
+fake-useragent
+psycopg2-binary
+pandas
+python-dotenv

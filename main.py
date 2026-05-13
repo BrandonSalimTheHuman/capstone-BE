@@ -1,5 +1,6 @@
 from fastapi import FastAPI, Depends, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from contextlib import asynccontextmanager
@@ -8,6 +9,9 @@ from database.database import engine, get_db, Base
 from database import models
 from database.schemas import schemas
 from database import crud
+from auth.auth import get_current_user
+from auth.oauth import get_google_oauth_url
+from database.database import supabase
 
 
 @asynccontextmanager
@@ -268,3 +272,79 @@ def delete_item(list_item_id: int, db: Session = Depends(get_db)):
     if not crud.delete_store_list_item(db, list_item_id):
         raise HTTPException(status_code=404, detail="Item not found")
     return {"detail": "Item deleted"}
+
+
+# ── Auth (Supabase) ──────────────────────────────────
+
+@app.post("/auth/register", response_model=schemas.UserResponse, status_code=201)
+def register(body: schemas.UserRegister):
+    if supabase is None:
+        raise HTTPException(status_code=503, detail="Auth service not configured")
+    try:
+        result = supabase.auth.sign_up({"email": body.email, "password": body.password})
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    if result.user is None:
+        raise HTTPException(status_code=400, detail="Registration failed")
+    return schemas.UserResponse(
+        user_id=str(result.user.id),
+        email=result.user.email,
+        email_confirmed=result.user.email_confirmed_at is not None,
+    )
+
+
+@app.post("/auth/login", response_model=schemas.Token)
+def login(credentials: schemas.LoginRequest):
+    if supabase is None:
+        raise HTTPException(status_code=503, detail="Auth service not configured")
+    try:
+        result = supabase.auth.sign_in_with_password(
+            {"email": credentials.email, "password": credentials.password}
+        )
+    except Exception:
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+    return schemas.Token(access_token=result.session.access_token)
+
+
+@app.get("/auth/google")
+def google_login(redirect_to: str = "http://localhost:3000/auth/callback"):
+    """Redirect the browser to Supabase's Google OAuth consent screen."""
+    try:
+        url = get_google_oauth_url(redirect_to)
+    except RuntimeError as e:
+        raise HTTPException(status_code=503, detail=str(e))
+    return RedirectResponse(url)
+
+
+@app.get("/auth/me", response_model=schemas.UserResponse)
+def get_me(current_user=Depends(get_current_user)):
+    return schemas.UserResponse(
+        user_id=str(current_user.id),
+        email=current_user.email,
+        email_confirmed=current_user.email_confirmed_at is not None,
+    )
+
+
+# ── Store Product Availability ───────────────────────
+
+@app.put("/stores/{store_id}/products/{product_id}/availability", response_model=schemas.StoreProduct)
+def set_availability(store_id: int, product_id: int, update: schemas.StoreProductUpdate, db: Session = Depends(get_db)):
+    return crud.set_store_product_availability(db, store_id, product_id, update.is_available)
+
+
+@app.get("/stores/{store_id}/products/{product_id}/availability", response_model=schemas.StoreProduct)
+def get_availability(store_id: int, product_id: int, db: Session = Depends(get_db)):
+    sp = crud.get_store_product(db, store_id, product_id)
+    if sp is None:
+        raise HTTPException(status_code=404, detail="No availability record found")
+    return sp
+
+
+@app.get("/stores/{store_id}/available-products", response_model=List[schemas.StoreProduct])
+def available_products_for_store(store_id: int, db: Session = Depends(get_db)):
+    return crud.get_available_products_for_store(db, store_id)
+
+
+@app.get("/products/{product_id}/store-availability", response_model=List[schemas.StoreProduct])
+def product_store_availability(product_id: int, db: Session = Depends(get_db)):
+    return crud.get_stores_with_product(db, product_id)

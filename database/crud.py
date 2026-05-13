@@ -286,6 +286,42 @@ def uncheck_item(db: Session, list_item_id: int) -> Optional[models.StoreListIte
     return update_store_list_item(db, list_item_id, schemas.StoreListItemUpdate(is_checked=False))
 
 
+# STORE PRODUCT AVAILABILITY CRUD
+
+def get_store_product(db: Session, store_id: int, product_id: int) -> Optional[models.StoreProduct]:
+    return db.query(models.StoreProduct).filter(
+        models.StoreProduct.store_id == store_id,
+        models.StoreProduct.product_id == product_id,
+    ).first()
+
+def set_store_product_availability(
+    db: Session, store_id: int, product_id: int, is_available: bool
+) -> models.StoreProduct:
+    db_sp = get_store_product(db, store_id, product_id)
+    if db_sp is None:
+        db_sp = models.StoreProduct(
+            store_id=store_id, product_id=product_id, is_available=is_available
+        )
+        db.add(db_sp)
+    else:
+        db_sp.is_available = is_available
+        db_sp.last_updated = datetime.utcnow()
+    db.commit()
+    db.refresh(db_sp)
+    return db_sp
+
+def get_available_products_for_store(db: Session, store_id: int) -> List[models.StoreProduct]:
+    return db.query(models.StoreProduct).filter(
+        models.StoreProduct.store_id == store_id,
+        models.StoreProduct.is_available == True,
+    ).all()
+
+def get_stores_with_product(db: Session, product_id: int) -> List[models.StoreProduct]:
+    return db.query(models.StoreProduct).filter(
+        models.StoreProduct.product_id == product_id,
+    ).all()
+
+
 
 
 

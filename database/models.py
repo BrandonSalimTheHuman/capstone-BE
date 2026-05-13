@@ -1,33 +1,38 @@
-from sqlalchemy import Column, Integer, String, DECIMAL, DateTime, Boolean, ForeignKey
+from sqlalchemy import Column, Integer, String, DECIMAL, DateTime, Boolean, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from database.database import Base
 
+
 class Store(Base):
     __tablename__ = "stores"
-    
+
     store_id = Column(Integer, primary_key=True, index=True)
     store_name = Column(String, nullable=False)
     url = Column(String, nullable=False)
-    
+
     prices = relationship("Price", back_populates="store")
     store_lists = relationship("StoreList", back_populates="store")
+    store_products = relationship("StoreProduct", back_populates="store")
+
 
 class Product(Base):
     __tablename__ = "products"
-    
+
     product_id = Column(Integer, primary_key=True, index=True)
     product_name = Column(String, nullable=False, index=True)
     size = Column(String, nullable=False)
     description = Column(String, nullable=True)
     image = Column(String, nullable=True)
-    
+
     prices = relationship("Price", back_populates="product")
     store_list_items = relationship("StoreListItem", back_populates="product")
+    store_products = relationship("StoreProduct", back_populates="product")
+
 
 class Price(Base):
     __tablename__ = "prices"
-    
+
     price_id = Column(Integer, primary_key=True, index=True)
     product_id = Column(Integer, ForeignKey("products.product_id"), nullable=False)
     store_id = Column(Integer, ForeignKey("stores.store_id"), nullable=False)
@@ -38,31 +43,34 @@ class Price(Base):
     special_type = Column(String, nullable=True)
     special_buy_quantity = Column(Integer, nullable=True)
     special_buy_price = Column(DECIMAL(10, 2), nullable=True)
-    
+
     product = relationship("Product", back_populates="prices")
     store = relationship("Store", back_populates="prices")
-    
+
+
 class PriceHistory(Base):
     __tablename__ = "price_history"
-    
+
     history_id = Column(Integer, primary_key=True, index=True)
     price_id = Column(Integer, ForeignKey("prices.price_id"), nullable=False)
     old_price = Column(DECIMAL(10, 2), nullable=False)
     new_price = Column(DECIMAL(10, 2), nullable=False)
     change_date = Column(DateTime, default=datetime.utcnow, nullable=False)
-    
+
     price = relationship("Price")
-    
+
+
 # shopping list
 class ParentList(Base):
     __tablename__ = "parent_lists"
 
     parent_list_id = Column(Integer, primary_key=True, index=True)
-    user_id        = Column(Integer, nullable=False, index=True)
+    # UUID from Supabase auth.users — stored as text, no SQLAlchemy FK across schemas
+    user_id        = Column(String, nullable=False, index=True)
     list_name      = Column(String, nullable=False)
     created_at     = Column(DateTime, default=datetime.utcnow, nullable=False)
 
-    store_lists = relationship("StoreList", back_populates="parent_list", cascade="all, delete-orphan") 
+    store_lists = relationship("StoreList", back_populates="parent_list", cascade="all, delete-orphan")
 
 
 class StoreList(Base):
@@ -88,5 +96,18 @@ class StoreListItem(Base):
 
     store_list = relationship("StoreList", back_populates="items")
     product    = relationship("Product", back_populates="store_list_items")
-    
-    
+
+
+class StoreProduct(Base):
+    __tablename__ = "store_products"
+
+    store_product_id = Column(Integer, primary_key=True, index=True)
+    store_id         = Column(Integer, ForeignKey("stores.store_id"), nullable=False)
+    product_id       = Column(Integer, ForeignKey("products.product_id"), nullable=False)
+    is_available     = Column(Boolean, default=True, nullable=False)
+    last_updated     = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    __table_args__ = (UniqueConstraint("store_id", "product_id", name="uq_store_product"),)
+
+    store   = relationship("Store", back_populates="store_products")
+    product = relationship("Product", back_populates="store_products")
