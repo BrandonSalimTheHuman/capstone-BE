@@ -5,6 +5,9 @@ on:
     - cron: '0 20 * * *'  # 8 PM UTC = ~6 AM AEDT
   workflow_dispatch:       # allow manual runs from the Actions tab
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true  # opt into Node.js 24 for all actions
+
 # Shared install steps are repeated per job because each job runs on a fresh
 # runner. All scraper jobs are independent and run in parallel.
 
