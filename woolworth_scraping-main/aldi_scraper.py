@@ -20,51 +20,58 @@ def scrape_aldi_specials(headless=False):
         options.add_argument('--no-sandbox')
         options.add_argument('--disable-dev-shm-usage')
         options.add_argument('--disable-gpu')
+        options.add_argument('--window-size=1920,1080')  # maximize_window() is a no-op in headless
 
     options.add_argument('--log-level=3')
     options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
-    
+
     driver = webdriver.Chrome(service=service, options=options)
-    driver.maximize_window() 
+    if not headless:
+        driver.maximize_window()
 
     driver.get(URL)
 
-    # Changing the location
+    loc_wait = WebDriverWait(driver, 8)
+
     # Press location change button
     try:
-        change_address_button = driver.find_element(By.CSS_SELECTOR, '[data-mn="merchant-change-button"]')
+        change_address_button = loc_wait.until(
+            EC.element_to_be_clickable((By.CSS_SELECTOR, '[data-mn="merchant-change-button"]'))
+        )
         change_address_button.click()
         time.sleep(1)
-    except NoSuchElementException:
-        print("BUtton to change address not found")
+    except TimeoutException:
+        print("Location change button not found, proceeding without location selection")
 
-    # Proceeding to merchant page
+    # Proceed to merchant search
     try:
-        proceed_button = driver.find_element(By.CSS_SELECTOR, '[data-mn="merchant-change-confirm"]')
+        proceed_button = loc_wait.until(
+            EC.element_to_be_clickable((By.CSS_SELECTOR, '[data-mn="merchant-change-confirm"]'))
+        )
         proceed_button.click()
         time.sleep(1)
-    except NoSuchElementException:
-        print("Button to proceed not found")
-    
-    # Inputting text into search box
+    except TimeoutException:
+        print("Proceed button not found")
+
+    # Type store name into search box
     try:
-        search_box = driver.find_element(By.CSS_SELECTOR, '[data-mn="merchant-search-box"]')
+        search_box = loc_wait.until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, '[data-mn="merchant-search-box"]'))
+        )
         search_box.send_keys("Fairy Meadow")
         time.sleep(1)
-    except NoSuchElementException:
-        print("Search bar not found")
-    
-    # Confirming address change:
+    except TimeoutException:
+        print("Store search box not found")
+
+    # Select the Fairy Meadow store from results
     try:
-        long_wait = WebDriverWait(driver, 7)
-        long_wait.until(
-            EC.presence_of_all_elements_located((By.CSS_SELECTOR, '[aria-label="Select Store ALDI Fairy Meadow"]'))
+        store_btn = loc_wait.until(
+            EC.element_to_be_clickable((By.CSS_SELECTOR, '[aria-label="Select Store ALDI Fairy Meadow"]'))
         )
-        search_box = driver.find_element(By.CSS_SELECTOR, '[aria-label="Select Store ALDI Fairy Meadow"]')
-        search_box.click()
-        time.sleep(1)
-    except NoSuchElementException:
-        print("Button to confirm change not found")
+        store_btn.click()
+        time.sleep(2)
+    except TimeoutException:
+        print("Fairy Meadow store result not found, proceeding anyway")
 
     # Main scraping logic
     products_data = []
@@ -76,7 +83,7 @@ def scrape_aldi_specials(headless=False):
             driver.get(f'{URL}?page={page_counter}')
 
             print("Waiting for product tiles to load...")
-            long_wait = WebDriverWait(driver, 7)
+            long_wait = WebDriverWait(driver, 20)
             product_tile_hosts = long_wait.until(
                 EC.presence_of_all_elements_located((By.CSS_SELECTOR, '.product-tile__link'))
             )
