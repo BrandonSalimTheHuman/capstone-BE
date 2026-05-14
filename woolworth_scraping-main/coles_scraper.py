@@ -28,6 +28,7 @@ def scrape_coles(part=None, headless=False):
         options.add_argument('--no-sandbox')
         options.add_argument('--disable-dev-shm-usage')
         options.add_argument('--disable-gpu')
+        options.add_argument('--window-size=1920,1080')
 
     # create a random fake user agent
     ua = UserAgent()
@@ -35,7 +36,8 @@ def scrape_coles(part=None, headless=False):
     options.add_argument(f'user-agent={user_agent}')
 
     driver = uc.Chrome(options=options)
-    driver.maximize_window()
+    if not headless:
+        driver.maximize_window()
 
     # seeing the navigator.webdriver property to false
     driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {
@@ -80,7 +82,7 @@ def scrape_coles(part=None, headless=False):
                 scroll(driver)
 
                 print("Waiting for product tiles to load...")
-                long_wait = WebDriverWait(driver, 7)
+                long_wait = WebDriverWait(driver, 20)
                 product_tile_hosts = long_wait.until(
                     EC.presence_of_all_elements_located((By.CSS_SELECTOR, '.list-item:not(.single-tile-ad)'))
                 )

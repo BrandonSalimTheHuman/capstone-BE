@@ -24,12 +24,14 @@ def scrape_iga(part=None, headless=False):
         options.add_argument('--no-sandbox')
         options.add_argument('--disable-dev-shm-usage')
         options.add_argument('--disable-gpu')
+        options.add_argument('--window-size=1920,1080')
 
     options.add_argument('--log-level=3')
     options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
 
     driver = webdriver.Chrome(service=service, options=options)
-    driver.maximize_window()
+    if not headless:
+        driver.maximize_window()
     products_data = []
     
     try:
@@ -50,7 +52,7 @@ def scrape_iga(part=None, headless=False):
         # except TimeoutException:
         #     print("No location pop-up found, continuing...")
 
-        long_wait = WebDriverWait(driver, 10)
+        long_wait = WebDriverWait(driver, 20)
         while True:
             try:
                 browse_categories_buttons = long_wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '[aria-label="`Browse"]')))
