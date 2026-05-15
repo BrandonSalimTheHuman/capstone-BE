@@ -111,6 +111,10 @@ jobs:
       - uses: browser-actions/setup-chrome@v1
       - name: Install dependencies
         run: pip install -r woolworth_scraping-main/requirements.txt
+      - name: Install Latest Google Chrome
+        run: |
+          sudo apt-get update
+          sudo apt-get --only-upgrade install google-chrome-stable
       - name: Run scraper
         run: python woolworth_scraping-main/iga_scraper.py --part 1 --headless
 
@@ -128,6 +132,10 @@ jobs:
       - uses: browser-actions/setup-chrome@v1
       - name: Install dependencies
         run: pip install -r woolworth_scraping-main/requirements.txt
+      - name: Install Latest Google Chrome
+        run: |
+          sudo apt-get update
+          sudo apt-get --only-upgrade install google-chrome-stable
       - name: Run scraper
         run: python woolworth_scraping-main/iga_scraper.py --part 2 --headless
 
