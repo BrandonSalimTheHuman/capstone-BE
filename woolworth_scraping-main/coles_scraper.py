@@ -25,9 +25,6 @@ def scrape_coles(part=None, headless=False):
 
     if headless:
         options.add_argument('--headless=new')
-        options.add_argument('--no-sandbox')
-        options.add_argument('--disable-dev-shm-usage')
-        options.add_argument('--disable-gpu')
         options.add_argument('--window-size=1920,1080')
 
     # create a random fake user agent
@@ -39,20 +36,22 @@ def scrape_coles(part=None, headless=False):
     if not headless:
         driver.maximize_window()
 
-    # seeing the navigator.webdriver property to false
-    driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {
-        "source": """
-            Object.defineProperty(navigator, 'webdriver', {
-            get: () => undefined
-            })
-        """
-    })
+    # # seeing the navigator.webdriver property to false
+    # driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {
+    #     "source": """
+    #         Object.defineProperty(navigator, 'webdriver', {
+    #         get: () => undefined
+    #         })
+    #     """
+    # })
 
     products_data = []
 
+    time.sleep(5)
+
     driver.get('https://www.coles.com.au/browse')
 
-    long_wait = WebDriverWait(driver, 30)
+    long_wait = WebDriverWait(driver, 60)
     category_containers= long_wait.until(
         EC.presence_of_all_elements_located((By.CSS_SELECTOR, '.coles-targeting-ShopCategoriesShopCategoryStyledCategoryContainer'))
     )

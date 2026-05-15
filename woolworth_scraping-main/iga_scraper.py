@@ -1,23 +1,29 @@
 import time
+import pandas as pd
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
-from selenium.common.exceptions import TimeoutException, NoSuchElementException, StaleElementReferenceException, DetachedShadowRootException, ElementClickInterceptedException
-import re
+from selenium.common.exceptions import TimeoutException, NoSuchElementException, StaleElementReferenceException
+from fake_useragent import UserAgent
+import undetected_chromedriver as uc
+import json
 import random
+import db_upload
 
-# TODO: replace with the actual IGA scraping URL/logic when ready
-URL = "https://www.woolworths.com.au"
-
-def get_shadow_root(driver, host_element):
-    return driver.execute_script('return arguments[0].shadowRoot', host_element)
+def scroll(driver):
+    # get scrollable height
+    total_height = driver.execute_script("return document.body.scrollHeight")
+    # simulate slow scrolling
+    for i in range(0, (round(total_height * random.random())), random.randint(400, 700)):
+        driver.execute_script(f"window.scrollTo(0, {i});")
+        time.sleep(random.uniform(0.2, 0.4))
 
 def scrape_iga(part=None, headless=False):
-    service = Service(ChromeDriverManager().install())
-    options = webdriver.ChromeOptions()
+    options = uc.ChromeOptions()
+    options.add_argument('--log-level=3')
 
     if headless:
         options.add_argument('--headless=new')
@@ -26,222 +32,201 @@ def scrape_iga(part=None, headless=False):
         options.add_argument('--disable-gpu')
         options.add_argument('--window-size=1920,1080')
 
-    options.add_argument('--log-level=3')
-    options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
-
-    driver = webdriver.Chrome(service=service, options=options)
-    if not headless:
-        driver.maximize_window()
-    products_data = []
+    # create a random fake user agent
+    ua = UserAgent()
+    user_agent = ua.random
+    options.add_argument(f'user-agent={user_agent}')
     
-    try:
-        driver.get(URL)
-        wait = WebDriverWait(driver, 10) # Use a 10-second wait for pop-ups
+    driver = uc.Chrome(options=options) 
+    if not headless:
+        driver.maximize_window() 
 
-        # try:
-        #     print("Looking for a location pop-up...")
-        #     # Find the input field for postcode/suburb
-        #     location_input = wait.until(EC.visibility_of_element_located((By.ID, 'wx-sl-search__input')))
-        #     location_input.send_keys("Wollongong")
-        #     time.sleep(1) 
-        #     # Click the first search result
-        #     first_result = wait.until(EC.element_to_be_clickable((By.CLASS_NAME, 'mobile-search-result-item')))
-        #     first_result.click()
-        #     print("Successfully handled location pop-up.")
-        #     time.sleep(3) 
-        # except TimeoutException:
-        #     print("No location pop-up found, continuing...")
+    products_data = []
 
-        long_wait = WebDriverWait(driver, 20)
+    driver.get('https://www.igashop.com.au/')
+
+    long_wait = WebDriverWait(driver, 20)
+    location_field = long_wait.until(
+        EC.presence_of_all_elements_located((By.ID, 'store-reminder-location'))
+    )
+
+    location_field = driver.find_element(By.ID, "store-reminder-location")
+    location_field.send_keys("Mt Cotton")   
+
+    time.sleep(2)
+
+    long_wait = WebDriverWait(driver, 20)
+    correct_location = long_wait.until(
+        EC.presence_of_all_elements_located((By.CSS_SELECTOR, '[data-test-id="address-finder-result-1"]'))
+    )
+
+    correct_location = driver.find_element(By.CSS_SELECTOR, '[data-test-id="address-finder-result-1"]')
+    correct_location.click()
+
+    time.sleep(2)
+
+    long_wait = WebDriverWait(driver, 20)
+    store_id = long_wait.until(
+        EC.presence_of_all_elements_located((By.CSS_SELECTOR, '[data-store-id="84971"]'))
+    )
+
+    select_button = driver.find_element(By.CSS_SELECTOR, '[data-store-id="84971"] button')
+
+    select_button.click()
+
+    time.sleep(2)
+
+    long_wait = WebDriverWait(driver, 20)
+    category_containers= long_wait.until(
+        EC.presence_of_all_elements_located((By.CSS_SELECTOR, '[data-test-id^="category-navigation-item"]'))
+    )
+
+    time.sleep(2)
+
+    category_urls = []
+
+    for container in category_containers:
         while True:
             try:
-                browse_categories_buttons = long_wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '[aria-label="`Browse"]')))
-                browse_categories_button = driver.find_element(By.CSS_SELECTOR, '[aria-label="`Browse"]')
+                url = container.get_attribute('href')
+                if url is None:
+                    category_name = container.text.strip()
+                    category_name = '-'.join(category_name.lower().replace(',', '').split())
+                    category_urls.append(f'https://www.igashop.com.au/categories/{category_name}')
+                else:
+                    category_urls.append(url)
                 break
             except StaleElementReferenceException: 
-                print("Stale element encountered")
-                print("Trying again")
+                print("Stale")
+                   
+    
+    # Temporary
+    print(category_urls)
 
-        browse_categories_button.click()
+    final_urls = []
 
+    for category in category_urls:
+        driver.get(category)
         long_wait = WebDriverWait(driver, 20)
-        category_list = []
+        subcategories = []
         while True:
             try:
-                categories_exist = long_wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '.description')))
-                categories = driver.find_elements(By.CSS_SELECTOR, '.description')
-                for category in categories:
-                    category_list.append(category.text.strip())
+                subcategories = long_wait.until(
+                    EC.presence_of_all_elements_located((By.CSS_SELECTOR, ".min-w-fit.snap-start a"))
+                )
                 break
-            except StaleElementReferenceException: 
-                print("Stale element encountered")
-                print("Trying again")
+            except TimeoutException:
+                print("Timeout, assuming no subcategories")
+                category = category[:-2]
+                break
+            except StaleElementReferenceException:
+                print("Stale")
 
-        category_urls = []
-        for category in category_list:
-            cleaned = re.sub(r'[^a-zA-Z0-9\s]', '', category.lower())
-            category_url = "-".join(cleaned.split())
-            category_urls.append(category_url)
-        
-        category_urls = category_urls[1:-1]
+        if len(subcategories) == 0:
+            final_urls.append(category)
+        else:
+            for subcategory in subcategories:
+                final_urls.append(subcategory.get_attribute("href"))
+                
+        time.sleep(random.uniform(1, 3))
 
-        if part == 1:
-            category_urls = category_urls[:len(category_urls) // 2]
-        elif part == 2:
-            category_urls = category_urls[len(category_urls) // 2:]
 
-        while True:
-            driver.get("https://www.woolworths.com.au/shop/browse/fruit-veg")
-            try:
-                long_wait = WebDriverWait(driver, 20)
-                try:
-                    right_arrow_load = long_wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '.chip-nav-arrow.right')))
-                    right_arrow = driver.find_element(By.CSS_SELECTOR, '.chip-nav-arrow.right')
-                    right_arrow.click()
-                except NoSuchElementException:
-                    print("Skipping right arrow")
-                except ElementClickInterceptedException:
-                    print("Skipping right arrow (intercepted)")
-                buttons_load = long_wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '.chip.chip-secondary')))
-                buttons = driver.find_elements(By.CSS_SELECTOR, '.chip.chip-secondary')
-                for button in buttons:
-                    time.sleep(0.5)
-                    try:
-                        button_text = button.find_element(By.CSS_SELECTOR, '.chip-text.ng-star-inserted')
-                    except NoSuchElementException:
-                        continue
-                    if button_text.text.strip() == 'All filters':
-                        button.click()
-                break                   
-            except StaleElementReferenceException: 
-                print("Stale element encountered")
-                print("Trying again")
-            
+    if part == 1:
+        final_urls = final_urls[:len(final_urls) // 2]
+    elif part == 2:
+        final_urls = final_urls[len(final_urls) // 2:]
+
+    for url in final_urls:
+        page_counter = 0
+        last_problem_page = -1
+        newly_added_items = []
         while True:
             try:
-                long_wait = WebDriverWait(driver, 20)
-                buttons_load = long_wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '.checkbox-label.ng-star-inserted')))
-                buttons = driver.find_elements(By.CSS_SELECTOR, '.checkbox-label.ng-star-inserted')
-                for button in buttons:
-                    time.sleep(0.5)
-                    if button.text.strip() in ['In stock', 'Hide Everyday Market']:
-                        button.click()
-                confirm_button_load = long_wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '.button.primary')))
-                confirm_buttons = driver.find_elements(By.CSS_SELECTOR, '.button.primary')
-                for button in confirm_buttons:
-                    if button.text.strip() == 'See results':
-                        button.click()
-                        break
-                break                   
-            except StaleElementReferenceException: 
-                print("Stale element encountered")
-                print("Trying again")
-
-
-        for category_url in category_urls:
-            page_counter = 0
-            newly_added_items = []
-            while True:
                 page_counter += 1
-                driver.get(f'{URL}/shop/browse/{category_url}?pageNumber={page_counter}')
+                driver.get(f'{url}/{page_counter}')
+
+                # sleep for some time
+                time.sleep(random.uniform(0.5, 1.5))
+
+                scroll(driver)
+
                 print("Waiting for product tiles to load...")
                 long_wait = WebDriverWait(driver, 30)
-                product_tile_hosts = long_wait.until(
-                    EC.presence_of_all_elements_located((By.TAG_NAME, 'wc-product-tile'))
+                product_tiles = long_wait.until(
+                    EC.presence_of_all_elements_located((By.CSS_SELECTOR, '[data-product-card="true"]'))
                 )
-                
-                print(f"Found {len(product_tile_hosts)} product tiles on the page.")
 
-                stale = False
+                print(f"Found {len(product_tiles)} product tiles on the page.")
 
-                for host in product_tile_hosts:
+                for i, host in enumerate(product_tiles):
                     try:
-                        # random sleeping
-                        if random.random() < 0.3:
-                            time.sleep(random.uniform(0.25, 1))
+                        if i%6 == 0:
+                            # I sleep
+                            time.sleep(random.uniform(0.05, 0.25))
                         
-                        # get shadow root
-                        shadow_root = get_shadow_root(driver, host)
-
-                        time.sleep(0.05)
-
-                        # product name
-                        name = shadow_root.find_element(By.CSS_SELECTOR, '.product-title-container .title').text.strip()
-
-                        # product price
-                        try:
-                            full_price = shadow_root.find_element(By.CSS_SELECTOR, 'div.primary').text.strip()
-                            price = full_price.split()[0]
-                        except NoSuchElementException:
-                            continue
-
-                        # product unit price
-                        try:
-                            unit_price = shadow_root.find_element(By.CSS_SELECTOR, 'span.price-per-cup').text.strip()
-                        except NoSuchElementException:
-                            unit_price = "N/A" 
-
-                        # product promo
-                        try:
-                            promo_area = shadow_root.find_element(By.CSS_SELECTOR, '.product-tile-promo-info')
-                            try:
-                                complex_discount = promo_area.find_element(By.TAG_NAME, 'span')
-                                complex_discount_words = complex_discount.text.lower().strip().split()
-                                check = False
-                                if len(complex_discount_words) == 3:
-                                    for i in range(len(complex_discount_words)):
-                                        if complex_discount_words[i] == 'for':
-                                            complex_discount = {'Quantity': complex_discount_words[i-1], 'Price': complex_discount_words[i+1][1:]}
-                                            check = True
-                                    if not check:
-                                        complex_discount = "N/A"
-                                else:
-                                    complex_discount = "N/A"
-                            except NoSuchElementException:
-                                complex_discount = "N/A"
-                        except NoSuchElementException:
-                            complex_discount = "N/A"
+                        key_text = host.find_elements(By.CSS_SELECTOR, 'span')
+                      
+                        if len(key_text) == 2:
+                            name = f"{key_text[0].text.strip()}"
+                            price = f"{key_text[1].text.strip()}"
+                        else:
+                            name = f"{key_text[0].text.strip()} {key_text[1].text.strip()}"
+                            price = key_text[2].text.strip()
+                        if len(key_text) > 4:
+                            key_text[4] = key_text[4].text.replace("per", "")
+                            unit_price = f"{key_text[3].text.strip()}/{key_text[4].strip()}"
+                        elif len(key_text) > 3:
+                            unit_price = key_text[3].text.strip()
+                        else:
+                            unit_price = "N/A"
+        
                         
-                        # product image
-                        img = shadow_root.find_element(By.CSS_SELECTOR, '.product-tile-image img').get_attribute('src')
+                        img = host.find_element(By.CSS_SELECTOR, 'img').get_attribute('src')
 
-                        # adding to newly added items
-                        newly_added_items.append({'Product Name': name, 'Price': price, 'Unit Price': unit_price, 'Complex discount': complex_discount, 'Image': img})
+                        newly_added_items.append({'Product Name': name, 'Price': price, 'Unit Price': unit_price, 'Image': img})
+    
                     except (NoSuchElementException, AttributeError):
                         continue
-                    except (StaleElementReferenceException, DetachedShadowRootException): 
-                        print("Stale element encountered")
-                        # try again
-                        page_counter -= 1
-                        stale = True
-                        break
+                    except StaleElementReferenceException: 
+                            print("Stale element encountered")
+                            page_counter -= 1
+                            break
                 
-                # if there wasn't an error, check if every item already exists. If so, the products is assumed to have run out, move to the next category
-                if not stale:
-                    check = True
-                    for item in newly_added_items:
-                        if item not in products_data:
-                            check = False
-                            products_data.append(item)
-                    newly_added_items = []
-                    if check:
-                        break
+                check = True
+                for item in newly_added_items:
+                    if item not in products_data:
+                        check = False
+                        products_data.append(item)
+                
+                newly_added_items = []
+                
+                if check:
+                    break
 
-    except TimeoutException:
-        print("Scraping Interrupted: Timed out waiting for product tiles to appear.")
-        return products_data
-    except Exception as e:
-        print(f"An unexpected error occurred: {e}")
-        return products_data
-    finally:
-        print("Closing browser.")
-        driver.quit()
-        
-    return products_data
+            except TimeoutException:
+                print("Timeout waiting for product tiles. Assuming end of pages.")
+                if page_counter != last_problem_page:
+                    last_problem_page = page_counter
+                    page_counter -= 1
+                    time.sleep(60)
+                else:
+                    break 
+            except Exception as e:
+                print(f"An unexpected error occurred: {e}")
+                return None
+
+    unique_products = [
+    json.loads(element) for element in set(
+        json.dumps(data) for data in products_data
+    )]
+    
+    print("Closing browser.")
+    driver.quit()
+
+    return unique_products
 
 if __name__ == "__main__":
     import argparse
-    import db_upload
 
     parser = argparse.ArgumentParser(description="Scrape IGA and upload to DB")
     parser.add_argument('--part', type=int, choices=[1, 2], default=None,
@@ -259,4 +244,4 @@ if __name__ == "__main__":
         db_upload.upload_products(scraped_data, "IGA")
     else:
         print("Scraping returned no data.")
-        raise SystemExit(1)
+        raise SystemExit(1) 

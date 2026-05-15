@@ -38,20 +38,6 @@ def scrape_woolworths_specials(part=None, headless=False):
         driver.get(URL)
         wait = WebDriverWait(driver, 20) # Use a 20-second wait for pop-ups
 
-        # try:
-        #     print("Looking for a location pop-up...")
-        #     # Find the input field for postcode/suburb
-        #     location_input = wait.until(EC.visibility_of_element_located((By.ID, 'wx-sl-search__input')))
-        #     location_input.send_keys("Wollongong")
-        #     time.sleep(1) 
-        #     # Click the first search result
-        #     first_result = wait.until(EC.element_to_be_clickable((By.CLASS_NAME, 'mobile-search-result-item')))
-        #     first_result.click()
-        #     print("Successfully handled location pop-up.")
-        #     time.sleep(3) 
-        # except TimeoutException:
-        #     print("No location pop-up found, continuing...")
-
         long_wait = WebDriverWait(driver, 20)
         while True:
             try:
