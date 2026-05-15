@@ -31,15 +31,10 @@ def scrape_iga(part=None, headless=False):
         options.add_argument('--disable-dev-shm-usage')
         options.add_argument('--disable-gpu')
         options.add_argument('--window-size=1920,1080')
-
-    # create a random fake user agent
-    ua = UserAgent()
-    user_agent = ua.random
-    options.add_argument(f'user-agent={user_agent}')
-    
-    driver = uc.Chrome(options=options) 
-    if not headless:
-        driver.maximize_window() 
+        driver = uc.Chrome(options=options, headless=True)
+    else:
+        driver = uc.Chrome(options=options)
+        driver.maximize_window()
 
     products_data = []
 
@@ -136,16 +131,7 @@ def scrape_iga(part=None, headless=False):
     elif part == 2:
         final_urls = final_urls[len(final_urls) // 2:]
 
-    url_count = 0
     for url in final_urls:
-        url_count += 1
-        if url_count == 10:
-            driver.quit()
-            time.sleep(15)
-            driver = uc.Chrome(options=options)
-            if not headless:
-                driver.maximize_window()
-            url_count = 0
         page_counter = 0
         last_problem_page = -1
         newly_added_items = []
