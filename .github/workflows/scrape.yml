@@ -116,7 +116,7 @@ jobs:
           sudo apt-get update
           sudo apt-get --only-upgrade install google-chrome-stable
       - name: Run scraper
-        run: python woolworth_scraping-main/iga_scraper.py --part 1 --headless
+        run: xvfb-run --auto-servernum python woolworth_scraping-main/iga_scraper.py --part 1 --headless
 
   scrape-iga-2:
     name: IGA (part 2)
@@ -137,7 +137,7 @@ jobs:
           sudo apt-get update
           sudo apt-get --only-upgrade install google-chrome-stable
       - name: Run scraper
-        run: python woolworth_scraping-main/iga_scraper.py --part 2 --headless
+        run: xvfb-run --auto-servernum python woolworth_scraping-main/iga_scraper.py --part 2 --headless
 
   # Runs after every scraper job regardless of pass/fail.
   # Marks any store_product whose last_updated is older than 12 hours as unavailable.
