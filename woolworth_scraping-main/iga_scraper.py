@@ -127,9 +127,9 @@ def scrape_iga(part=None, headless=False):
 
 
     if part == 1:
-        final_urls = final_urls[:len(final_urls) // 2]
+        final_urls = final_urls[::2]
     elif part == 2:
-        final_urls = final_urls[len(final_urls) // 2:]
+        final_urls = final_urls[1::2]
 
     for url in final_urls:
         page_counter = 0
