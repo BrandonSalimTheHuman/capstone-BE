@@ -130,6 +130,8 @@ def scrape_iga(part=None, headless=False):
         final_urls = final_urls[::2]
     elif part == 2:
         final_urls = final_urls[1::2]
+    elif part == 3:
+        final_urls = final_urls[0:1]
 
     for url in final_urls:
         page_counter = 0
@@ -203,6 +205,7 @@ def scrape_iga(part=None, headless=False):
                 if page_counter != last_problem_page:
                     last_problem_page = page_counter
                     page_counter -= 1
+                    print("Retrying the page after timeout")
                     time.sleep(60)
                 else:
                     break 
@@ -224,7 +227,7 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(description="Scrape IGA and upload to DB")
-    parser.add_argument('--part', type=int, choices=[1, 2], default=None,
+    parser.add_argument('--part', type=int, choices=[1, 2, 3], default=None,
                         help="Scrape only the first (1) or second (2) half of categories")
     parser.add_argument('--headless', action='store_true',
                         help="Run Chrome in headless mode (required for CI)")
