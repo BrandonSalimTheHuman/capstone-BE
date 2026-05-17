@@ -134,6 +134,7 @@ def scrape_iga(part=None, headless=False):
         final_urls = final_urls[0:1]
 
     for url in final_urls:
+        print("Current url being worked on: ", url)
         page_counter = 0
         last_problem_page = -1
         newly_added_items = []
@@ -147,13 +148,13 @@ def scrape_iga(part=None, headless=False):
 
                 scroll(driver)
 
-                print("Waiting for product tiles to load...")
+                # print("Waiting for product tiles to load...")
                 long_wait = WebDriverWait(driver, 30)
                 product_tiles = long_wait.until(
                     EC.presence_of_all_elements_located((By.CSS_SELECTOR, '[data-product-card="true"]'))
                 )
 
-                print(f"Found {len(product_tiles)} product tiles on the page.")
+                #print(f"Found {len(product_tiles)} product tiles on the page.")
 
                 for i, host in enumerate(product_tiles):
                     try:
@@ -185,7 +186,7 @@ def scrape_iga(part=None, headless=False):
                     except (NoSuchElementException, AttributeError):
                         continue
                     except StaleElementReferenceException: 
-                            print("Stale element encountered")
+                            # print("Stale element encountered")
                             page_counter -= 1
                             break
                 
@@ -201,11 +202,11 @@ def scrape_iga(part=None, headless=False):
                     break
 
             except TimeoutException:
-                print("Timeout waiting for product tiles. Assuming end of pages.")
+                # print("Timeout waiting for product tiles. Assuming end of pages.")
                 if page_counter != last_problem_page:
                     last_problem_page = page_counter
                     page_counter -= 1
-                    print("Retrying the page after timeout")
+                    # print("Retrying the page after timeout")
                     time.sleep(60)
                 else:
                     break 
@@ -218,8 +219,12 @@ def scrape_iga(part=None, headless=False):
         json.dumps(data) for data in products_data
     )]
     
-    # print("Closing browser.")
-    # driver.quit()
+    try:
+        driver.quit()
+    except Exception:
+        pass
+    finally:
+        del driver
 
     return unique_products
 
