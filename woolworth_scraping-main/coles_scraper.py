@@ -29,24 +29,14 @@ def scrape_coles(part=None, headless=False):
         options.add_argument('--disable-dev-shm-usage')
         options.add_argument('--disable-gpu')
         options.add_argument('--window-size=1920,1080')
-
-    # create a random fake user agent
-    ua = UserAgent()
-    user_agent = ua.random
-    options.add_argument(f'user-agent={user_agent}')
-
-    driver = uc.Chrome(options=options)
-    if not headless:
+        driver = uc.Chrome(options=options, headless=True)
+    else:
+        # create a random fake user agent
+        ua = UserAgent()
+        user_agent = ua.random
+        options.add_argument(f'user-agent={user_agent}')
+        driver = uc.Chrome(options=options)
         driver.maximize_window()
-
-    # seeing the navigator.webdriver property to false
-    driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {
-        "source": """
-            Object.defineProperty(navigator, 'webdriver', {
-            get: () => undefined
-            })
-        """
-    })
 
     products_data = []
 

@@ -218,8 +218,8 @@ def scrape_iga(part=None, headless=False):
         json.dumps(data) for data in products_data
     )]
     
-    print("Closing browser.")
-    driver.quit()
+    # print("Closing browser.")
+    # driver.quit()
 
     return unique_products
 

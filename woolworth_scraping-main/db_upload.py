@@ -22,7 +22,7 @@ def _parse_price(raw) -> float:
     return float(m.group(0)) if m else 0.0
 
 
-def upload_products(products: list, store_name: str) -> None:
+def upload_products(products: list, store_name: str, batch_size: int = 5000) -> None:
     """Upsert scraped products into the database and mark them available.
 
     For each product:
@@ -52,95 +52,119 @@ def upload_products(products: list, store_name: str) -> None:
                              "Make sure the stores table is seeded.")
         store_id = row[0]
 
-        uploaded = 0
-        for item in products:
-            name = (item.get("Product Name") or "").strip()
-            if not name:
-                continue
+        total_uploaded = 0
+        total_products = len(products)
 
-            price_val = _parse_price(item.get("Price", "0"))
-            unit_price_raw = item.get("Unit Price") or item.get("unit_price")
-            unit_price = unit_price_raw if unit_price_raw and unit_price_raw != "N/A" else None
-            image = item.get("Image") or item.get("Image url") or None
-            size = _extract_size(name)
+        for i in range(0, total_products, batch_size):
+            batch = products[i : i + batch_size]
 
-            cd = item.get("Complex discount") or item.get("Complex Discount")
-            is_special = False
-            special_qty = None
-            special_price = None
-            if isinstance(cd, dict):
-                is_special = True
-                try:
-                    special_qty = int(cd.get("Quantity", 0))
-                except (ValueError, TypeError):
-                    special_qty = None
-                try:
-                    special_price = float(cd.get("Price", 0))
-                except (ValueError, TypeError):
-                    special_price = None
+            try:
+                for item in batch:
+                    name = (item.get("Product Name") or "").strip()
+                    if not name:
+                        continue
 
-            # Find or create product (matched by exact name)
-            cur.execute(
-                "SELECT product_id FROM products WHERE product_name = %s LIMIT 1",
-                (name,),
-            )
-            row = cur.fetchone()
-            if row:
-                product_id = row[0]
-                if image:
-                    cur.execute(
-                        "UPDATE products SET image = %s WHERE product_id = %s AND image IS NULL",
-                        (image, product_id),
+                    price_val = _parse_price(item.get("Price", "0"))
+                    unit_price_raw = item.get("Unit Price") or item.get(
+                        "unit_price"
                     )
-            else:
-                cur.execute(
-                    "INSERT INTO products (product_name, size, image) "
-                    "VALUES (%s, %s, %s) RETURNING product_id",
-                    (name, size, image),
+                    unit_price = (
+                        unit_price_raw
+                        if unit_price_raw and unit_price_raw != "N/A"
+                        else None
+                    )
+                    image = item.get("Image") or item.get("Image url") or None
+                    size = _extract_size(name)
+
+                    cd = item.get("Complex discount") or item.get(
+                        "Complex Discount"
+                    )
+                    is_special = False
+                    special_qty = None
+                    special_price = None
+                    if isinstance(cd, dict):
+                        is_special = True
+                        try:
+                            special_qty = int(cd.get("Quantity", 0))
+                        except (ValueError, TypeError):
+                            special_qty = None
+                        try:
+                            special_price = float(cd.get("Price", 0))
+                        except (ValueError, TypeError):
+                            special_price = None
+
+                    cur.execute(
+                        "SELECT product_id FROM products WHERE product_name = %s LIMIT 1",
+                        (name,),
+                    )
+                    row = cur.fetchone()
+                    if row:
+                        product_id = row[0]
+                        if image:
+                            cur.execute(
+                                "UPDATE products SET image = %s WHERE product_id = %s AND image IS NULL",
+                                (image, product_id),
+                            )
+                    else:
+                        cur.execute(
+                            "INSERT INTO products (product_name, size, image) "
+                            "VALUES (%s, %s, %s) RETURNING product_id",
+                            (name, size, image),
+                        )
+                        product_id = cur.fetchone()[0]
+
+                    cur.execute(
+                        """
+                        SELECT price FROM prices
+                        WHERE product_id = %s AND store_id = %s
+                        ORDER BY date_recorded DESC LIMIT 1
+                        """,
+                        (product_id, store_id),
+                    )
+                    existing = cur.fetchone()
+                    if not existing or abs(float(existing[0]) - price_val) > 0.005:
+                        cur.execute(
+                            """
+                            INSERT INTO prices
+                                (product_id, store_id, price, unit_price, date_recorded,
+                                 is_special, special_buy_quantity, special_buy_price)
+                            VALUES (%s, %s, %s, %s, NOW(), %s, %s, %s)
+                            """,
+                            (
+                                product_id,
+                                store_id,
+                                price_val,
+                                unit_price,
+                                is_special,
+                                special_qty,
+                                special_price,
+                            ),
+                        )
+
+                    cur.execute(
+                        """
+                        INSERT INTO store_products (store_id, product_id, is_available, last_updated)
+                        VALUES (%s, %s, TRUE, NOW())
+                        ON CONFLICT (store_id, product_id)
+                        DO UPDATE SET is_available = TRUE, last_updated = NOW()
+                        """,
+                        (store_id, product_id),
+                    )
+
+                    total_uploaded += 1
+
+                conn.commit()
+                print(
+                    f"[db_upload] Committed batch {i // batch_size + 1}: processed {total_uploaded}/{total_products} items."
                 )
-                product_id = cur.fetchone()[0]
 
-            # Insert a new price record only when the price has changed
-            cur.execute(
-                """
-                SELECT price FROM prices
-                WHERE product_id = %s AND store_id = %s
-                ORDER BY date_recorded DESC LIMIT 1
-                """,
-                (product_id, store_id),
-            )
-            existing = cur.fetchone()
-            if not existing or abs(float(existing[0]) - price_val) > 0.005:
-                cur.execute(
-                    """
-                    INSERT INTO prices
-                        (product_id, store_id, price, unit_price, date_recorded,
-                         is_special, special_buy_quantity, special_buy_price)
-                    VALUES (%s, %s, %s, %s, NOW(), %s, %s, %s)
-                    """,
-                    (product_id, store_id, price_val, unit_price,
-                     is_special, special_qty, special_price),
-                )
+            except Exception:
+                conn.rollback()
+                raise
 
-            # Upsert availability — always refresh last_updated to mark as "seen this run"
-            cur.execute(
-                """
-                INSERT INTO store_products (store_id, product_id, is_available, last_updated)
-                VALUES (%s, %s, TRUE, NOW())
-                ON CONFLICT (store_id, product_id)
-                DO UPDATE SET is_available = TRUE, last_updated = NOW()
-                """,
-                (store_id, product_id),
-            )
-
-            uploaded += 1
-
-        conn.commit()
-        print(f"[db_upload] Committed {uploaded} products for '{store_name}'")
-
-    except Exception:
-        conn.rollback()
-        raise
+        print(
+            f"[db_upload] Completed! Total committed: {total_uploaded} products for '{store_name}'"
+        )
 
     finally:
         cur.close()
