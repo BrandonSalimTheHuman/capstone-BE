@@ -91,29 +91,34 @@ def scrape_aldi_specials(headless=False):
             print(f"Found {len(product_tile_hosts)} product tiles on the page.")
 
             for host in product_tile_hosts:
-                try:
-                    # shadow_root = get_shadow_root(driver, host)
-                    name = host.find_element(By.CSS_SELECTOR, '.product-tile__name').text.strip()
-                    price = host.find_element(By.CSS_SELECTOR, '.base-price__regular').text.strip()
-                                
+                retries = 3
+                while retries > 0:
                     try:
-                        unit_price = host.find_element(By.CSS_SELECTOR, '.product-tile__comparison-price').text.strip()[1:-1]
-                    except NoSuchElementException:
-                        unit_price = "N/A"
-                    
-                    if unit_price == '' or unit_price is None:
-                        unit_price = "N/A"
+                        # shadow_root = get_shadow_root(driver, host)
+                        name = host.find_element(By.CSS_SELECTOR, '.product-tile__name').text.strip()
+                        price = host.find_element(By.CSS_SELECTOR, '.base-price__regular').text.strip()
+                                    
+                        try:
+                            unit_price = host.find_element(By.CSS_SELECTOR, '.product-tile__comparison-price').text.strip()[1:-1]
+                        except NoSuchElementException:
+                            unit_price = "N/A"
+                        
+                        if unit_price == '' or unit_price is None:
+                            unit_price = "N/A"
 
-                    img = host.find_element(By.CSS_SELECTOR, '.base-image').get_attribute('src')
+                        img = host.find_element(By.CSS_SELECTOR, '.base-image').get_attribute('src')
 
-                    products_data.append({'Product Name': name, 'Price': price, 'Unit Price': unit_price, "Image url": img})
-                    
-                except (NoSuchElementException, AttributeError):
-                            continue
-                except StaleElementReferenceException: 
-                        print("Stale element encountered")
-                        page_counter -= 1
+                        products_data.append({'Product Name': name, 'Price': price, 'Unit Price': unit_price, "Image url": img})
                         break
+                        
+                    except (NoSuchElementException, AttributeError):
+                               break
+                    except StaleElementReferenceException: 
+                        retries -= 1
+                        print(f"Stale element encountered. Retrying item... ({retries} retries left)")
+                        if retries == 0:
+                            print("Failed to scrape this item after multiple attempts. Skipping item.")
+                    break # Skip to next item
                  
         except TimeoutException:
             print("Timeout waiting for product tiles. Assuming end of pages.")
