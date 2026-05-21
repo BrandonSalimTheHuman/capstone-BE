@@ -7,6 +7,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.common.exceptions import TimeoutException, NoSuchElementException, StaleElementReferenceException, DetachedShadowRootException, ElementClickInterceptedException
+import undetected_chromedriver as uc
 import re
 import random
 
@@ -16,8 +17,8 @@ def get_shadow_root(driver, host_element):
     return driver.execute_script('return arguments[0].shadowRoot', host_element)
 
 def scrape_woolworths_specials(part=None, headless=False):
-    service = Service(ChromeDriverManager().install())
-    options = webdriver.ChromeOptions()
+    options = uc.ChromeOptions()
+    options.add_argument('--log-level=3')
 
     if headless:
         options.add_argument('--headless=new')
@@ -25,13 +26,11 @@ def scrape_woolworths_specials(part=None, headless=False):
         options.add_argument('--disable-dev-shm-usage')
         options.add_argument('--disable-gpu')
         options.add_argument('--window-size=1920,1080')
-
-    options.add_argument('--log-level=3')
-    options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
-
-    driver = webdriver.Chrome(service=service, options=options)
-    if not headless:
+        driver = uc.Chrome(options=options, headless=True)
+    else:
+        driver = uc.Chrome(options=options)
         driver.maximize_window()
+        
     products_data = []
     
     try:
