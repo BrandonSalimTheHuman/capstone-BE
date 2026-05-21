@@ -27,6 +27,11 @@ jobs:
       - uses: browser-actions/setup-chrome@v1
       - name: Install dependencies
         run: pip install -r woolworth_scraping-main/requirements.txt
+      - name: Get Chrome Version
+        id: chrome-version
+        run: |
+          CHROME_VERSION=$(google-chrome --version | grep -oE '[0-9]+' | head -n 1)
+          echo "CHROME_MAJOR_VERSION=$CHROME_VERSION" >> $GITHUB_ENV
       - name: Run scraper
         run: python woolworth_scraping-main/woolworths_scraper.py --part 1 --headless
 
@@ -44,6 +49,11 @@ jobs:
       - uses: browser-actions/setup-chrome@v1
       - name: Install dependencies
         run: pip install -r woolworth_scraping-main/requirements.txt
+      - name: Get Chrome Version
+        id: chrome-version
+        run: |
+          CHROME_VERSION=$(google-chrome --version | grep -oE '[0-9]+' | head -n 1)
+          echo "CHROME_MAJOR_VERSION=$CHROME_VERSION" >> $GITHUB_ENV
       - name: Run scraper
         run: python woolworth_scraping-main/woolworths_scraper.py --part 2 --headless
 
@@ -95,6 +105,11 @@ jobs:
       - uses: browser-actions/setup-chrome@v1
       - name: Install dependencies
         run: pip install -r woolworth_scraping-main/requirements.txt
+      - name: Get Chrome Version
+        id: chrome-version
+        run: |
+          CHROME_VERSION=$(google-chrome --version | grep -oE '[0-9]+' | head -n 1)
+          echo "CHROME_MAJOR_VERSION=$CHROME_VERSION" >> $GITHUB_ENV
       - name: Run scraper
         run: python woolworth_scraping-main/aldi_scraper.py --headless
 
@@ -109,6 +124,11 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+      - name: Get Chrome Version
+        id: chrome-version
+        run: |
+          CHROME_VERSION=$(google-chrome --version | grep -oE '[0-9]+' | head -n 1)
+          echo "CHROME_MAJOR_VERSION=$CHROME_VERSION" >> $GITHUB_ENV
       - name: Setup Chrome
         uses: browser-actions/setup-chrome@v1
         with:
@@ -139,6 +159,11 @@ jobs:
           chrome-version: stable
       - name: Install dependencies
         run: pip install -r woolworth_scraping-main/requirements.txt
+      - name: Get Chrome Version
+        id: chrome-version
+        run: |
+          CHROME_VERSION=$(google-chrome --version | grep -oE '[0-9]+' | head -n 1)
+          echo "CHROME_MAJOR_VERSION=$CHROME_VERSION" >> $GITHUB_ENV
       - name: Run scraper
         run: python woolworth_scraping-main/iga_scraper.py --part 2 --headless
 

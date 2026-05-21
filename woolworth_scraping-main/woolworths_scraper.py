@@ -1,3 +1,4 @@
+import os
 import time
 import pandas as pd
 from selenium import webdriver
@@ -20,15 +21,20 @@ def scrape_woolworths_specials(part=None, headless=False):
     options = uc.ChromeOptions()
     options.add_argument('--log-level=3')
 
+    chrome_major_version = os.environ.get('CHROME_MAJOR_VERSION')
+    if chrome_major_version:
+        chrome_major_version = int(chrome_major_version)
+
     if headless:
         options.add_argument('--headless=new')
         options.add_argument('--no-sandbox')
         options.add_argument('--disable-dev-shm-usage')
         options.add_argument('--disable-gpu')
         options.add_argument('--window-size=1920,1080')
-        driver = uc.Chrome(options=options, headless=True)
+        
+        driver = uc.Chrome(options=options, headless=True, version_main=chrome_major_version)
     else:
-        driver = uc.Chrome(options=options)
+        driver = uc.Chrome(options=options, version_main=chrome_major_version)
         driver.maximize_window()
         
     products_data = []
