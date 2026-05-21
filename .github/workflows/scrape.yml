@@ -105,11 +105,6 @@ jobs:
       - uses: browser-actions/setup-chrome@v1
       - name: Install dependencies
         run: pip install -r woolworth_scraping-main/requirements.txt
-      - name: Get Chrome Version
-        id: chrome-version
-        run: |
-          CHROME_VERSION=$(google-chrome --version | grep -oE '[0-9]+' | head -n 1)
-          echo "CHROME_MAJOR_VERSION=$CHROME_VERSION" >> $GITHUB_ENV
       - name: Run scraper
         run: python woolworth_scraping-main/aldi_scraper.py --headless
 

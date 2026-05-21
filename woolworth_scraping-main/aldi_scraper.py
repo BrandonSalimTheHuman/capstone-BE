@@ -1,4 +1,3 @@
-import os
 import time
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
@@ -15,10 +14,7 @@ URL = "https://www.aldi.com.au/products"
 def scrape_aldi_specials(headless=False):
     service = Service(ChromeDriverManager().install())
     options = webdriver.ChromeOptions()
-
-    chrome_major_version = os.environ.get('CHROME_MAJOR_VERSION')
-    if chrome_major_version:
-        chrome_major_version = int(chrome_major_version)
+    
 
     if headless:
         options.add_argument('--headless=new')
@@ -30,7 +26,7 @@ def scrape_aldi_specials(headless=False):
     options.add_argument('--log-level=3')
     options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
 
-    driver = webdriver.Chrome(service=service, options=options, version_main=chrome_major_version)
+    driver = webdriver.Chrome(service=service, options=options)
     if not headless:
         driver.maximize_window()
 
