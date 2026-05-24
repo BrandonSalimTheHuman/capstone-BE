@@ -119,8 +119,15 @@ class ParentListUpdate(BaseModel):
 class ParentList(ParentListBase):
     parent_list_id: int
     created_at: datetime
+    share_token: Optional[str] = None
     store_lists: List[StoreList] = []
     model_config = ConfigDict(from_attributes=True)
+
+class ShareTokenResponse(BaseModel):
+    share_token: str
+
+class ImportListRequest(BaseModel):
+    user_id: str
 
 class UserRegister(BaseModel):
     email: EmailStr
