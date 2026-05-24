@@ -2,49 +2,60 @@ name: Daily Product Scraper
 
 on:
   schedule:
-    - cron: '0 20 * * *'  # 8 PM UTC = ~6 AM AEDT
-  workflow_dispatch:       # allow manual runs from the Actions tab
+    - cron: '0 18 * * 3' # 8 PM UTC = ~6 AM AEDT
+  workflow_dispatch: # allow manual runs from the Actions tab
 
 env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true  # opt into Node.js 24 for all actions
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true # opt into Node.js 24 for all actions
+  PYTHONUNBUFFERED: '1'
 
 # Shared install steps are repeated per job because each job runs on a fresh
 # runner. All scraper jobs are independent and run in parallel.
 
 jobs:
-  # scrape-woolworths-1:
-  #   name: Woolworths (part 1)
-  #   runs-on: ubuntu-latest
-  #   timeout-minutes: 340
-  #   env:
-  #     DATABASE_URL: ${{ secrets.DATABASE_URL }}
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - uses: actions/setup-python@v5
-  #       with:
-  #         python-version: '3.11'
-  #     - uses: browser-actions/setup-chrome@v1
-  #     - name: Install dependencies
-  #       run: pip install -r woolworth_scraping-main/requirements.txt
-  #     - name: Run scraper
-  #       run: python woolworth_scraping-main/woolworths_scraper.py --part 1 --headless
+  scrape-woolworths-1:
+    name: Woolworths (part 1)
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: browser-actions/setup-chrome@v1
+      - name: Install dependencies
+        run: pip install -r woolworth_scraping-main/requirements.txt
+      - name: Get Chrome Version
+        id: chrome-version
+        run: |
+          CHROME_VERSION=$(google-chrome --version | grep -oE '[0-9]+' | head -n 1)
+          echo "CHROME_MAJOR_VERSION=$CHROME_VERSION" >> $GITHUB_ENV
+      - name: Run scraper
+        run: python woolworth_scraping-main/woolworths_scraper.py --part 1 --headless
 
-  # scrape-woolworths-2:
-  #   name: Woolworths (part 2)
-  #   runs-on: ubuntu-latest
-  #   timeout-minutes: 340
-  #   env:
-  #     DATABASE_URL: ${{ secrets.DATABASE_URL }}
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - uses: actions/setup-python@v5
-  #       with:
-  #         python-version: '3.11'
-  #     - uses: browser-actions/setup-chrome@v1
-  #     - name: Install dependencies
-  #       run: pip install -r woolworth_scraping-main/requirements.txt
-  #     - name: Run scraper
-  #       run: python woolworth_scraping-main/woolworths_scraper.py --part 2 --headless
+  scrape-woolworths-2:
+    name: Woolworths (part 2)
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: browser-actions/setup-chrome@v1
+      - name: Install dependencies
+        run: pip install -r woolworth_scraping-main/requirements.txt
+      - name: Get Chrome Version
+        id: chrome-version
+        run: |
+          CHROME_VERSION=$(google-chrome --version | grep -oE '[0-9]+' | head -n 1)
+          echo "CHROME_MAJOR_VERSION=$CHROME_VERSION" >> $GITHUB_ENV
+      - name: Run scraper
+        run: python woolworth_scraping-main/woolworths_scraper.py --part 2 --headless
 
   # scrape-coles-1:
   #   name: Coles (part 1)
@@ -97,39 +108,59 @@ jobs:
       - name: Run scraper
         run: python woolworth_scraping-main/aldi_scraper.py --headless
 
-  # scrape-iga-1:
-  #   name: IGA (part 1)
-  #   runs-on: ubuntu-latest
-  #   timeout-minutes: 340
-  #   env:
-  #     DATABASE_URL: ${{ secrets.DATABASE_URL }}
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - uses: actions/setup-python@v5
-  #       with:
-  #         python-version: '3.11'
-  #     - uses: browser-actions/setup-chrome@v1
-  #     - name: Install dependencies
-  #       run: pip install -r woolworth_scraping-main/requirements.txt
-  #     - name: Run scraper
-  #       run: python woolworth_scraping-main/iga_scraper.py --part 1 --headless
+  scrape-iga-1:
+    name: IGA (part 1)
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Get Chrome Version
+        id: chrome-version
+        run: |
+          CHROME_VERSION=$(google-chrome --version | grep -oE '[0-9]+' | head -n 1)
+          echo "CHROME_MAJOR_VERSION=$CHROME_VERSION" >> $GITHUB_ENV
+      - name: Setup Chrome
+        uses: browser-actions/setup-chrome@v1
+        with:
+          chrome-version: stable
+      - name: Install dependencies
+        run: pip install -r woolworth_scraping-main/requirements.txt
+      - name: Install Latest Google Chrome
+        run: |
+          sudo apt-get update
+          sudo apt-get --only-upgrade install google-chrome-stable
+      - name: Run scraper
+        run: python woolworth_scraping-main/iga_scraper.py --part 1 --headless
 
-  # scrape-iga-2:
-  #   name: IGA (part 2)
-  #   runs-on: ubuntu-latest
-  #   timeout-minutes: 340
-  #   env:
-  #     DATABASE_URL: ${{ secrets.DATABASE_URL }}
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - uses: actions/setup-python@v5
-  #       with:
-  #         python-version: '3.11'
-  #     - uses: browser-actions/setup-chrome@v1
-  #     - name: Install dependencies
-  #       run: pip install -r woolworth_scraping-main/requirements.txt
-  #     - name: Run scraper
-  #       run: python woolworth_scraping-main/iga_scraper.py --part 2 --headless
+  scrape-iga-2:
+    name: IGA (part 2)
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Setup Chrome
+        uses: browser-actions/setup-chrome@v1
+        with:
+          chrome-version: stable
+      - name: Install dependencies
+        run: pip install -r woolworth_scraping-main/requirements.txt
+      - name: Get Chrome Version
+        id: chrome-version
+        run: |
+          CHROME_VERSION=$(google-chrome --version | grep -oE '[0-9]+' | head -n 1)
+          echo "CHROME_MAJOR_VERSION=$CHROME_VERSION" >> $GITHUB_ENV
+      - name: Run scraper
+        run: python woolworth_scraping-main/iga_scraper.py --part 2 --headless
 
   # Runs after every scraper job regardless of pass/fail.
   # Marks any store_product whose last_updated is older than 12 hours as unavailable.
@@ -137,13 +168,13 @@ jobs:
     name: Mark stale products unavailable
     runs-on: ubuntu-latest
     needs:
-      # - scrape-woolworths-1
-      # - scrape-woolworths-2
+      - scrape-woolworths-1
+      - scrape-woolworths-2
       # - scrape-coles-1
       # - scrape-coles-2
       - scrape-aldi
-      # - scrape-iga-1
-      # - scrape-iga-2
+      - scrape-iga-1
+      - scrape-iga-2
     if: always()
     env:
       DATABASE_URL: ${{ secrets.DATABASE_URL }}

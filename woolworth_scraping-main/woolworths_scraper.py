@@ -1,3 +1,4 @@
+import os
 import time
 import pandas as pd
 from selenium import webdriver
@@ -7,6 +8,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.common.exceptions import TimeoutException, NoSuchElementException, StaleElementReferenceException, DetachedShadowRootException, ElementClickInterceptedException
+import undetected_chromedriver as uc
 import re
 import random
 
@@ -16,41 +18,32 @@ def get_shadow_root(driver, host_element):
     return driver.execute_script('return arguments[0].shadowRoot', host_element)
 
 def scrape_woolworths_specials(part=None, headless=False):
-    service = Service(ChromeDriverManager().install())
-    options = webdriver.ChromeOptions()
+    options = uc.ChromeOptions()
+    options.add_argument('--log-level=3')
+
+    chrome_major_version = os.environ.get('CHROME_MAJOR_VERSION')
+    if chrome_major_version:
+        chrome_major_version = int(chrome_major_version)
 
     if headless:
         options.add_argument('--headless=new')
         options.add_argument('--no-sandbox')
         options.add_argument('--disable-dev-shm-usage')
         options.add_argument('--disable-gpu')
-
-    options.add_argument('--log-level=3')
-    options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
-
-    driver = webdriver.Chrome(service=service, options=options)
-    driver.maximize_window()
+        options.add_argument('--window-size=1920,1080')
+        
+        driver = uc.Chrome(options=options, headless=True, version_main=chrome_major_version)
+    else:
+        driver = uc.Chrome(options=options, version_main=chrome_major_version)
+        driver.maximize_window()
+        
     products_data = []
     
     try:
         driver.get(URL)
-        wait = WebDriverWait(driver, 10) # Use a 10-second wait for pop-ups
+        wait = WebDriverWait(driver, 20) # Use a 20-second wait for pop-ups
 
-        # try:
-        #     print("Looking for a location pop-up...")
-        #     # Find the input field for postcode/suburb
-        #     location_input = wait.until(EC.visibility_of_element_located((By.ID, 'wx-sl-search__input')))
-        #     location_input.send_keys("Wollongong")
-        #     time.sleep(1) 
-        #     # Click the first search result
-        #     first_result = wait.until(EC.element_to_be_clickable((By.CLASS_NAME, 'mobile-search-result-item')))
-        #     first_result.click()
-        #     print("Successfully handled location pop-up.")
-        #     time.sleep(3) 
-        # except TimeoutException:
-        #     print("No location pop-up found, continuing...")
-
-        long_wait = WebDriverWait(driver, 10)
+        long_wait = WebDriverWait(driver, 20)
         while True:
             try:
                 browse_categories_buttons = long_wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '[aria-label="`Browse"]')))
