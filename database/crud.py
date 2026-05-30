@@ -186,7 +186,7 @@ def get_parent_list(db: Session, parent_list_id: int) -> Optional[models.ParentL
         models.ParentList.parent_list_id == parent_list_id
     ).first()
 
-def get_parent_lists_by_user(db: Session, user_id: int, skip: int = 0, limit: int = 100) -> List[models.ParentList]:
+def get_parent_lists_by_user(db: Session, user_id: str, skip: int = 0, limit: int = 100) -> List[models.ParentList]:
     return db.query(models.ParentList).filter(
         models.ParentList.user_id == user_id
     ).offset(skip).limit(limit).all()
@@ -284,6 +284,54 @@ def check_off_item(db: Session, list_item_id: int) -> Optional[models.StoreListI
 
 def uncheck_item(db: Session, list_item_id: int) -> Optional[models.StoreListItem]:
     return update_store_list_item(db, list_item_id, schemas.StoreListItemUpdate(is_checked=False))
+
+
+# List Sharing
+
+def generate_share_token(db: Session, parent_list_id: int) -> Optional[models.ParentList]:
+    import uuid
+    db_list = get_parent_list(db, parent_list_id)
+    if db_list is None:
+        return None
+    db_list.share_token = str(uuid.uuid4())
+    db.commit()
+    db.refresh(db_list)
+    return db_list
+
+def import_shared_list(db: Session, share_token: str, new_user_id: str) -> Optional[models.ParentList]:
+    original = db.query(models.ParentList).filter(
+        models.ParentList.share_token == share_token
+    ).first()
+    if original is None:
+        return None
+
+    new_list = models.ParentList(
+        user_id=new_user_id,
+        list_name=original.list_name,
+    )
+    db.add(new_list)
+    db.flush()
+
+    for store_list in original.store_lists:
+        new_store_list = models.StoreList(
+            parent_list_id=new_list.parent_list_id,
+            store_id=store_list.store_id,
+        )
+        db.add(new_store_list)
+        db.flush()
+
+        for item in store_list.items:
+            new_item = models.StoreListItem(
+                store_list_id=new_store_list.store_list_id,
+                product_id=item.product_id,
+                quantity=item.quantity,
+                is_checked=False,
+            )
+            db.add(new_item)
+
+    db.commit()
+    db.refresh(new_list)
+    return new_list
 
 
 # STORE PRODUCT AVAILABILITY CRUD

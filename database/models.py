@@ -69,6 +69,7 @@ class ParentList(Base):
     user_id        = Column(String, nullable=False, index=True)
     list_name      = Column(String, nullable=False)
     created_at     = Column(DateTime, default=datetime.utcnow, nullable=False)
+    share_token    = Column(String, nullable=True, unique=True, index=True)
 
     store_lists = relationship("StoreList", back_populates="parent_list", cascade="all, delete-orphan")
 

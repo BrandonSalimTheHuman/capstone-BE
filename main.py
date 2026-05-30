@@ -182,7 +182,7 @@ def create_parent_list(parent_list: schemas.ParentListCreate, db: Session = Depe
 
 
 @app.get("/lists/user/{user_id}", response_model=List[schemas.ParentList])
-def read_user_lists(user_id: int, skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+def read_user_lists(user_id: str, skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     return crud.get_parent_lists_by_user(db, user_id, skip=skip, limit=limit)
 
 
@@ -207,6 +207,24 @@ def delete_parent_list(parent_list_id: int, db: Session = Depends(get_db)):
     if not crud.delete_parent_list(db, parent_list_id):
         raise HTTPException(status_code=404, detail="List not found")
     return {"detail": "List deleted"}
+
+
+# ── List Sharing ────────────────────────────────────
+
+@app.post("/lists/{parent_list_id}/share", response_model=schemas.ShareTokenResponse)
+def share_list(parent_list_id: int, db: Session = Depends(get_db)):
+    pl = crud.generate_share_token(db, parent_list_id)
+    if pl is None:
+        raise HTTPException(status_code=404, detail="List not found")
+    return schemas.ShareTokenResponse(share_token=pl.share_token)
+
+
+@app.post("/lists/import/{share_token}", response_model=schemas.ParentList)
+def import_list(share_token: str, body: schemas.ImportListRequest, db: Session = Depends(get_db)):
+    pl = crud.import_shared_list(db, share_token, body.user_id)
+    if pl is None:
+        raise HTTPException(status_code=404, detail="Share code not found")
+    return pl
 
 
 # ── Store Lists ─────────────────────────────────────
