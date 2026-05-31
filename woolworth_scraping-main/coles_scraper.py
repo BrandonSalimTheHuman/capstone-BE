@@ -31,7 +31,6 @@ def scrape_coles(part=None, headless=False):
         options.add_argument('--window-size=1920,1080')
         driver = uc.Chrome(options=options, headless=True)
     else:
-        # create a random fake user agent
         ua = UserAgent()
         user_agent = ua.random
         options.add_argument(f'user-agent={user_agent}')

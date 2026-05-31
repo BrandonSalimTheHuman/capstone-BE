@@ -1,8 +1,8 @@
-name: Daily Product Scraper
+name: Product Scraper
 
 on:
   schedule:
-    - cron: '0 18 * * 3' # 8 PM UTC = ~6 AM AEDT
+    - cron: '0 18 * * 3' # Time in UTC
   workflow_dispatch: # allow manual runs from the Actions tab
 
 env:

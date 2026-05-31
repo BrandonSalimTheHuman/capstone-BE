@@ -34,14 +34,14 @@ def scrape_woolworths_specials(part=None, headless=False):
         
         driver = uc.Chrome(options=options, headless=True, version_main=chrome_major_version)
     else:
-        driver = uc.Chrome(options=options, version_main=chrome_major_version)
+        driver = uc.Chrome(options=options, version_main=148)
         driver.maximize_window()
         
     products_data = []
     
     try:
         driver.get(URL)
-        wait = WebDriverWait(driver, 20) # Use a 20-second wait for pop-ups
+        wait = WebDriverWait(driver, 20) 
 
         long_wait = WebDriverWait(driver, 20)
         while True:
@@ -81,52 +81,54 @@ def scrape_woolworths_specials(part=None, headless=False):
         elif part == 2:
             category_urls = category_urls[len(category_urls) // 2:]
 
-        while True:
-            driver.get("https://www.woolworths.com.au/shop/browse/fruit-veg")
-            try:
-                long_wait = WebDriverWait(driver, 20)
-                try:
-                    right_arrow_load = long_wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '.chip-nav-arrow.right')))
-                    right_arrow = driver.find_element(By.CSS_SELECTOR, '.chip-nav-arrow.right')
-                    right_arrow.click()
-                except NoSuchElementException:
-                    print("Skipping right arrow")
-                except ElementClickInterceptedException:
-                    print("Skipping right arrow (intercepted)")
-                buttons_load = long_wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '.chip.chip-secondary')))
-                buttons = driver.find_elements(By.CSS_SELECTOR, '.chip.chip-secondary')
-                for button in buttons:
-                    time.sleep(0.5)
-                    try:
-                        button_text = button.find_element(By.CSS_SELECTOR, '.chip-text.ng-star-inserted')
-                    except NoSuchElementException:
-                        continue
-                    if button_text.text.strip() == 'All filters':
-                        button.click()
-                break                   
-            except StaleElementReferenceException: 
-                print("Stale element encountered")
-                print("Trying again")
+        # while True:
+        #     driver.get("https://www.woolworths.com.au/shop/browse/fruit-veg")
+        #     try:
+        #         long_wait = WebDriverWait(driver, 20)
+        #         try:
+        #             right_arrow_load = long_wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '.chip-nav-arrow.right')))
+        #             right_arrow = driver.find_element(By.CSS_SELECTOR, '.chip-nav-arrow.right')
+        #             right_arrow.click()
+        #         except (NoSuchElementException, TimeoutException):
+        #             print("Skipping right arrow")
+        #         except ElementClickInterceptedException:
+        #             print("Skipping right arrow (intercepted)")
+        #         buttons_load = long_wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '.chip-menu_core-chip-multiple__1rxiE')))
+        #         buttons = driver.find_elements(By.CSS_SELECTOR, '.chip-menu_core-chip-multiple__1rxiE')
+        #         for button in buttons:
+        #             time.sleep(0.5)
+        #             try:
+        #                 button_text = button.find_element(By.CSS_SELECTOR, 'span')
+        #             except NoSuchElementException:
+        #                 continue
+        #             if button_text.text.strip() == 'All filters':
+        #                 button.click()
+        #         break                   
+        #     except StaleElementReferenceException: 
+        #         print("Stale element encountered")
+        #         print("Trying again")
             
-        while True:
-            try:
-                long_wait = WebDriverWait(driver, 20)
-                buttons_load = long_wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '.checkbox-label.ng-star-inserted')))
-                buttons = driver.find_elements(By.CSS_SELECTOR, '.checkbox-label.ng-star-inserted')
-                for button in buttons:
-                    time.sleep(0.5)
-                    if button.text.strip() in ['In stock', 'Hide Everyday Market']:
-                        button.click()
-                confirm_button_load = long_wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '.button.primary')))
-                confirm_buttons = driver.find_elements(By.CSS_SELECTOR, '.button.primary')
-                for button in confirm_buttons:
-                    if button.text.strip() == 'See results':
-                        button.click()
-                        break
-                break                   
-            except StaleElementReferenceException: 
-                print("Stale element encountered")
-                print("Trying again")
+        # while True:
+        #     try:
+        #         long_wait = WebDriverWait(driver, 20)
+        #         buttons_load_1 = long_wait.until(EC.presence_of_all_elements_located((By.ID, '_r_49_')))
+        #         button_1 = driver.find_element(By.ID, '_r_49_')
+        #         button_1.click()
+        #         time.sleep(0.5)
+        #         buttons_load_2 = long_wait.until(EC.presence_of_all_elements_located((By.ID, '_r_4d_')))
+        #         button_2 = driver.find_element(By.ID, '_r_4d_')
+        #         button_2.click()
+        #         time.sleep(0.5)
+        #         confirm_button_load = long_wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '.all-filter_component_all-filter-footer__gOA2q button')))
+        #         confirm_buttons = driver.find_elements(By.CSS_SELECTOR, '.all-filter_component_all-filter-footer__gOA2q button')
+        #         for button in confirm_buttons:
+        #             if button.text.strip() == 'See results':
+        #                 button.click()
+        #                 break
+        #         break                   
+        #     except StaleElementReferenceException: 
+        #         print("Stale element encountered")
+        #         print("Trying again")
 
 
         for category_url in category_urls:
@@ -134,7 +136,7 @@ def scrape_woolworths_specials(part=None, headless=False):
             newly_added_items = []
             while True:
                 page_counter += 1
-                driver.get(f'{URL}/shop/browse/{category_url}?pageNumber={page_counter}')
+                driver.get(f'{URL}/shop/browse/{category_url}?excludeUnavailableProducts=true&isHideEverydayMarketProducts=true&pageNumber={page_counter}')
                 print("Waiting for product tiles to load...")
                 long_wait = WebDriverWait(driver, 30)
                 product_tile_hosts = long_wait.until(
@@ -226,7 +228,13 @@ def scrape_woolworths_specials(part=None, headless=False):
         return products_data
     finally:
         print("Closing browser.")
+    
+    try:
         driver.quit()
+    except Exception:
+        pass
+    finally:
+        del driver
         
     return products_data
 

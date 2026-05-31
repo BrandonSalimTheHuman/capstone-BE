@@ -208,11 +208,10 @@ def scrape_iga(part=None, headless=False):
                     break
 
             except TimeoutException:
-                # print("Timeout waiting for product tiles. Assuming end of pages.")
                 if page_counter != last_problem_page:
                     last_problem_page = page_counter
                     page_counter -= 1
-                    # print("Retrying the page after timeout")
+                    # sleep for a while before retrying
                     time.sleep(60)
                 else:
                     break 
