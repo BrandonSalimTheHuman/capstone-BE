@@ -5,3 +5,7 @@ psycopg2-binary
 supabase
 python-dotenv
 pydantic[email]
+
+# Testing
+pytest
+httpx
